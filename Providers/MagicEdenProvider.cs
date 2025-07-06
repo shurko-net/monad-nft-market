@@ -40,7 +40,9 @@ public class MagicEdenProvider : IMagicEdenProvider
             {
                 var tokens = JsonSerializer.Deserialize<List<TokenOwnership>>(tokensElement, new JsonSerializerOptions
                 {
-                    PropertyNameCaseInsensitive = true
+                    PropertyNameCaseInsensitive = true,
+                    Converters = { new JsonStringEnumConverter() },
+                    NumberHandling = JsonNumberHandling.AllowReadingFromString
                 });
 
                 if (tokens != null)

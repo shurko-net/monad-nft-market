@@ -12,10 +12,10 @@ public class TokenInfo
     [JsonPropertyName("image")] public string Image { get; set; } = string.Empty;
     [JsonPropertyName("imageSmall")] public string ImageSmall { get; set; } = string.Empty;
     [JsonPropertyName("imageLarge")] public string ImageLarge { get; set; } = string.Empty;
-    [JsonPropertyName("imageLarge")] public MetadataInfo MetadataInfo { get; set; } = null!;
+    [JsonPropertyName("metadata")] public MetadataInfo MetadataInfo { get; set; } = null!;
     [JsonPropertyName("description")] public string Description { get; set; } = string.Empty;
-    [JsonPropertyName("rarityScore")] public string RarityScore { get; set; } = string.Empty;
-    [JsonPropertyName("rarityRank")] public string RarityRank { get; set; } = string.Empty;
+    [JsonPropertyName("rarityScore")] public decimal? RarityScore { get; set; }
+    [JsonPropertyName("rarityRank")] public decimal? RarityRank { get; set; }
     [JsonPropertyName("supply")] public string Supply { get; set; } = string.Empty;
     [JsonPropertyName("remainingSupply")] public string RemainingSupply { get; set; } = string.Empty;
     [JsonPropertyName("media")] public string Media { get; set; } = string.Empty;
@@ -25,5 +25,4 @@ public class TokenInfo
     [JsonPropertyName("lastFlagUpdate")] public string LastFlagUpdate { get; set; } = string.Empty;
     [JsonPropertyName("lastFlagChange")] public string LastFlagChange { get; set; } = string.Empty;
     [JsonPropertyName("collection")] public CollectionInfo Collection { get; set; } = null!;
-    
 }
