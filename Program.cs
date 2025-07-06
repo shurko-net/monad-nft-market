@@ -2,10 +2,10 @@ using Mcrio.Configuration.Provider.Docker.Secrets;
 using MonadNftMarket.Configuration;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
-using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.CookiePolicy;
 using Microsoft.IdentityModel.Tokens;
+using MonadNftMarket.Providers;
 
 var builder = WebApplication.CreateBuilder(args);
 var myAllowSpecificOrigins = "_myAllowSpecificOrigins";
@@ -53,12 +53,14 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddSingleton<IMagicEdenProvider, MagicEdenProvider>();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: myAllowSpecificOrigins,
         policyBuilder =>
         {
-            policyBuilder.WithOrigins("https://crypto-crush-monad.xyz")
+            policyBuilder.WithOrigins("http://localhost:3000")
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials();
@@ -72,7 +74,8 @@ builder.Services.AddAuthentication(options =>
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 }).AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
 {
-    options.RequireHttpsMetadata = true;
+    // options.RequireHttpsMetadata = true;
+    options.RequireHttpsMetadata = false;
     options.SaveToken = true;
 
     options.MapInboundClaims = false;
@@ -121,6 +124,11 @@ app.UseCookiePolicy(new CookiePolicyOptions
     Secure = CookieSecurePolicy.Always
 });
 app.UseRouting();
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+});
 
 app.UseAuthentication();
 app.UseAuthorization();

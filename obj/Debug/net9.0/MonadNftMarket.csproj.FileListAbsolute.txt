@@ -67,3 +67,4 @@
 /home/aiooto/Programming/MonadNftMarket/MonadNftMarket/bin/Debug/net9.0/Swashbuckle.AspNetCore.SwaggerGen.dll
 /home/aiooto/Programming/MonadNftMarket/MonadNftMarket/bin/Debug/net9.0/Swashbuckle.AspNetCore.SwaggerUI.dll
 /home/aiooto/Programming/MonadNftMarket/MonadNftMarket/bin/Debug/net9.0/System.IO.Abstractions.dll
+/home/aiooto/Programming/MonadNftMarket/MonadNftMarket/obj/Debug/net9.0/MonadNftMarket.sourcelink.json
