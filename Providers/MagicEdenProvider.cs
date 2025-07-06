@@ -1,6 +1,7 @@
 using MonadNftMarket.Models.DTO;
 using RestSharp;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace MonadNftMarket.Providers;
 

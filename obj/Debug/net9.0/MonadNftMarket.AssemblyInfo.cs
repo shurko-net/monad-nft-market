@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MonadNftMarket")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6279245f1c3d7ba3643202ff56effbd227b6e71c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e46d21a364072d933fd76f182b8248e40a622a4a")]
 [assembly: System.Reflection.AssemblyProductAttribute("MonadNftMarket")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MonadNftMarket")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
