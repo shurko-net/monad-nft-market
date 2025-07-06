@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.CookiePolicy;
 using Microsoft.IdentityModel.Tokens;
 using MonadNftMarket.Providers;
+using MonadNftMarket.Services.Token;
 
 var builder = WebApplication.CreateBuilder(args);
 var myAllowSpecificOrigins = "_myAllowSpecificOrigins";
@@ -54,6 +55,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddSingleton<IMagicEdenProvider, MagicEdenProvider>();
+builder.Services.AddScoped<IUserIdentity, UserIdentity>();
 
 builder.Services.AddCors(options =>
 {
