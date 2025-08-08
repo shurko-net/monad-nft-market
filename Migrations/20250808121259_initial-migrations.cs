@@ -19,7 +19,7 @@ namespace MonadNftMarket.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    LastProcessedBlock = table.Column<string>(type: "text", nullable: true),
+                    LastProcessedBlock = table.Column<long>(type: "bigint", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -75,7 +75,7 @@ namespace MonadNftMarket.Migrations
             migrationBuilder.InsertData(
                 table: "Indexer",
                 columns: new[] { "Id", "LastProcessedBlock", "UpdatedAt" },
-                values: new object[] { 1, "0", new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified) });
+                values: new object[] { 1, 0L, new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified) });
         }
 
         /// <inheritdoc />

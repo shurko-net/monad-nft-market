@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MonadNftMarket.Context;
 using MonadNftMarket.Providers;
+using MonadNftMarket.Services.EventParser;
 using MonadNftMarket.Services.Token;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -58,6 +59,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddSingleton<IMagicEdenProvider, MagicEdenProvider>();
+builder.Services.AddSingleton<IEventParser, EventParser>();
+builder.Services.AddSingleton<IHyperSyncQuery, HyperSyncQuery>();
 builder.Services.AddScoped<IUserIdentity, UserIdentity>();
 
 builder.Services.AddCors(options =>

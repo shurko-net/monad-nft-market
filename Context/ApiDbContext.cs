@@ -15,7 +15,7 @@ public class ApiDbContext(DbContextOptions<ApiDbContext> options) : DbContext(op
             .HasData(new IndexerState
             {
                 Id = 1,
-                LastProcessedBlock = "0"
+                LastProcessedBlock = 0
             });
     }
 }

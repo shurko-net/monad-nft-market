@@ -31,8 +31,8 @@ namespace MonadNftMarket.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("LastProcessedBlock")
-                        .HasColumnType("text");
+                    b.Property<long>("LastProcessedBlock")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -45,7 +45,7 @@ namespace MonadNftMarket.Migrations
                         new
                         {
                             Id = 1,
-                            LastProcessedBlock = "0",
+                            LastProcessedBlock = 0L,
                             UpdatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         });
                 });

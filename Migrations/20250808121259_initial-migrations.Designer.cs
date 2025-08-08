@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MonadNftMarket.Migrations
 {
     [DbContext(typeof(ApiDbContext))]
-    [Migration("20250807173724_initial-migrations")]
+    [Migration("20250808121259_initial-migrations")]
     partial class initialmigrations
     {
         /// <inheritdoc />
@@ -34,8 +34,8 @@ namespace MonadNftMarket.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("LastProcessedBlock")
-                        .HasColumnType("text");
+                    b.Property<long>("LastProcessedBlock")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -48,7 +48,7 @@ namespace MonadNftMarket.Migrations
                         new
                         {
                             Id = 1,
-                            LastProcessedBlock = "0",
+                            LastProcessedBlock = 0L,
                             UpdatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         });
                 });
