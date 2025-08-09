@@ -2,12 +2,14 @@ using Mcrio.Configuration.Provider.Docker.Secrets;
 using MonadNftMarket.Configuration;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.CookiePolicy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MonadNftMarket.Context;
 using MonadNftMarket.Providers;
+using MonadNftMarket.Services;
 using MonadNftMarket.Services.EventParser;
 using MonadNftMarket.Services.Token;
 
@@ -54,7 +56,12 @@ builder.Services.Configure<EnvVariables>(options =>
 });
 
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(opts =>
+    {
+        opts.JsonSerializerOptions.Converters.Add(new BigIntegerJsonConverter());
+        opts.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -62,6 +69,8 @@ builder.Services.AddSingleton<IMagicEdenProvider, MagicEdenProvider>();
 builder.Services.AddSingleton<IEventParser, EventParser>();
 builder.Services.AddSingleton<IHyperSyncQuery, HyperSyncQuery>();
 builder.Services.AddScoped<IUserIdentity, UserIdentity>();
+
+builder.Services.AddHostedService<RecordChanges>();
 
 builder.Services.AddCors(options =>
 {

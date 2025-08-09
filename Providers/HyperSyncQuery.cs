@@ -1,13 +1,8 @@
-﻿using System.Text.Json;
+﻿using System.Numerics;
+using System.Text.Json;
 using Microsoft.Extensions.Options;
 using MonadNftMarket.Configuration;
-using MonadNftMarket.Models.DTO.ContractEvents;
 using MonadNftMarket.Models.DTO.HyperSync;
-using Nethereum.ABI.FunctionEncoding;
-using Nethereum.ABI.FunctionEncoding.Attributes;
-using Nethereum.Hex.HexConvertors.Extensions;
-using Nethereum.RPC.Eth.DTOs;
-using Nethereum.Web3;
 
 namespace MonadNftMarket.Providers;
 
@@ -16,9 +11,7 @@ public class HyperSyncQuery : IHyperSyncQuery
     private readonly HttpClient _httpClient;
     private readonly string _hyperSyncQueryUrl;
     private readonly string _alternativeHyperSyncQueryUrl;
-    private readonly string _monadRpcUrl;
     private readonly string _contractAddress;
-    private readonly Web3 _web3;
 
     public HyperSyncQuery(IOptions<EnvVariables> env)
     {
@@ -27,16 +20,15 @@ public class HyperSyncQuery : IHyperSyncQuery
         
         _hyperSyncQueryUrl = envValue.HyperSyncQueryUrl;
         _alternativeHyperSyncQueryUrl = envValue.AlternativeHyperSyncQueryUrl;
-        _monadRpcUrl = envValue.MonadRpcUrl;
         _contractAddress = envValue.ContractAddress;
-        _web3 = new Web3(envValue.HyperSyncQueryUrl);
     }
 
-    public async Task<Data> GetLogs(long nextBlock)
+    public async Task<Root> GetLogs(BigInteger nextBlock)
     {
+        Console.WriteLine($"Next block in GetLogs: {nextBlock.ToString()}");
         var payload = new
         {
-            from_block = nextBlock + 1,
+            from_block = (ulong)nextBlock,
             logs = new[]
             {
                 new { address = new[] { _contractAddress } }
@@ -55,9 +47,9 @@ public class HyperSyncQuery : IHyperSyncQuery
         
         var response = await _httpClient.PostAsJsonAsync(_hyperSyncQueryUrl, payload);
         
-        var data = JsonSerializer.Deserialize<HyperSyncWrapper>(await response.Content.ReadAsStringAsync()
+        var data = JsonSerializer.Deserialize<Root>(await response.Content.ReadAsStringAsync()
             , new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-        return data?.Data ?? new Data();
+        return data ?? new Root();
     }
 }

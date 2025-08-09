@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Numerics;
+using Microsoft.EntityFrameworkCore;
 
 namespace MonadNftMarket.Models;
 
@@ -6,6 +7,6 @@ namespace MonadNftMarket.Models;
 public class Peer
 {
     public string? Address { get; set; }
-    public List<string> TokenIds { get; set; } = [];
+    public List<BigInteger> TokenIds { get; set; } = [];
     public List<string> NftContracts { get; set; } = [];
 }

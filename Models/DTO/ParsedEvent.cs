@@ -13,7 +13,7 @@ public class ParsedEvent
     public string TransactionHash { get; set; } = null!;
     public string TransactionFrom { get; set; } = null!;
     public string TransactionTo   { get; set; } = null!;
-    public decimal TransactionValue { get; set; }
+    public decimal Price { get; set; }
     
     public long LogIndex         { get; set; }
     public long TransactionIndex { get; set; }

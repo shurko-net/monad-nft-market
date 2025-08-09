@@ -19,7 +19,7 @@ namespace MonadNftMarket.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    LastProcessedBlock = table.Column<long>(type: "bigint", nullable: false),
+                    LastProcessedBlock = table.Column<string>(type: "text", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -32,13 +32,13 @@ namespace MonadNftMarket.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    EventMetadata_BlockNumber = table.Column<long>(type: "bigint", nullable: false),
+                    EventMetadata_BlockNumber = table.Column<string>(type: "text", nullable: false),
                     EventMetadata_BlockHash = table.Column<string>(type: "text", nullable: true),
                     EventMetadata_Timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     EventMetadata_TransactionHash = table.Column<string>(type: "text", nullable: true),
-                    ListingId = table.Column<long>(type: "bigint", nullable: false),
+                    ListingId = table.Column<string>(type: "text", nullable: false),
                     NftContractAddress = table.Column<string>(type: "text", nullable: true),
-                    TokenId = table.Column<string>(type: "text", nullable: true),
+                    TokenId = table.Column<string>(type: "text", nullable: false),
                     SellerAddress = table.Column<string>(type: "text", nullable: true),
                     Price = table.Column<decimal>(type: "numeric", nullable: false),
                     IsSold = table.Column<bool>(type: "boolean", nullable: false),
@@ -55,15 +55,15 @@ namespace MonadNftMarket.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    EventMetadata_BlockNumber = table.Column<long>(type: "bigint", nullable: false),
+                    EventMetadata_BlockNumber = table.Column<string>(type: "text", nullable: false),
                     EventMetadata_BlockHash = table.Column<string>(type: "text", nullable: true),
                     EventMetadata_Timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     EventMetadata_TransactionHash = table.Column<string>(type: "text", nullable: true),
                     From_Address = table.Column<string>(type: "text", nullable: true),
-                    From_TokenIds = table.Column<List<string>>(type: "text[]", nullable: false),
+                    From_TokenIds = table.Column<string>(type: "text", nullable: false),
                     From_NftContracts = table.Column<List<string>>(type: "text[]", nullable: false),
                     To_Address = table.Column<string>(type: "text", nullable: true),
-                    To_TokenIds = table.Column<List<string>>(type: "text[]", nullable: false),
+                    To_TokenIds = table.Column<string>(type: "text", nullable: false),
                     To_NftContracts = table.Column<List<string>>(type: "text[]", nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
@@ -75,7 +75,13 @@ namespace MonadNftMarket.Migrations
             migrationBuilder.InsertData(
                 table: "Indexer",
                 columns: new[] { "Id", "LastProcessedBlock", "UpdatedAt" },
-                values: new object[] { 1, 0L, new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified) });
+                values: new object[] { 1, "0", new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified) });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Listings_ListingId",
+                table: "Listings",
+                column: "ListingId",
+                unique: true);
         }
 
         /// <inheritdoc />

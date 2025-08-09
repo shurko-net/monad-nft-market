@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MonadNftMarket.Migrations
 {
     [DbContext(typeof(ApiDbContext))]
-    [Migration("20250808121259_initial-migrations")]
+    [Migration("20250809115145_initial-migrations")]
     partial class initialmigrations
     {
         /// <inheritdoc />
@@ -34,8 +34,9 @@ namespace MonadNftMarket.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<long>("LastProcessedBlock")
-                        .HasColumnType("bigint");
+                    b.Property<string>("LastProcessedBlock")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -48,7 +49,7 @@ namespace MonadNftMarket.Migrations
                         new
                         {
                             Id = 1,
-                            LastProcessedBlock = 0L,
+                            LastProcessedBlock = "0",
                             UpdatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         });
                 });
@@ -68,8 +69,9 @@ namespace MonadNftMarket.Migrations
                     b.Property<bool>("IsSold")
                         .HasColumnType("boolean");
 
-                    b.Property<long>("ListingId")
-                        .HasColumnType("bigint");
+                    b.Property<string>("ListingId")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("NftContractAddress")
                         .HasColumnType("text");
@@ -81,9 +83,13 @@ namespace MonadNftMarket.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("TokenId")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ListingId")
+                        .IsUnique();
 
                     b.ToTable("Listings");
                 });
@@ -112,8 +118,9 @@ namespace MonadNftMarket.Migrations
                             b1.Property<string>("BlockHash")
                                 .HasColumnType("text");
 
-                            b1.Property<long>("BlockNumber")
-                                .HasColumnType("bigint");
+                            b1.Property<string>("BlockNumber")
+                                .IsRequired()
+                                .HasColumnType("text");
 
                             b1.Property<DateTime>("Timestamp")
                                 .HasColumnType("timestamp with time zone");
@@ -143,8 +150,9 @@ namespace MonadNftMarket.Migrations
                             b1.Property<string>("BlockHash")
                                 .HasColumnType("text");
 
-                            b1.Property<long>("BlockNumber")
-                                .HasColumnType("bigint");
+                            b1.Property<string>("BlockNumber")
+                                .IsRequired()
+                                .HasColumnType("text");
 
                             b1.Property<DateTime>("Timestamp")
                                 .HasColumnType("timestamp with time zone");
@@ -172,9 +180,9 @@ namespace MonadNftMarket.Migrations
                                 .IsRequired()
                                 .HasColumnType("text[]");
 
-                            b1.PrimitiveCollection<List<string>>("TokenIds")
+                            b1.Property<string>("TokenIds")
                                 .IsRequired()
-                                .HasColumnType("text[]");
+                                .HasColumnType("text");
 
                             b1.HasKey("TradeId");
 
@@ -196,9 +204,9 @@ namespace MonadNftMarket.Migrations
                                 .IsRequired()
                                 .HasColumnType("text[]");
 
-                            b1.PrimitiveCollection<List<string>>("TokenIds")
+                            b1.Property<string>("TokenIds")
                                 .IsRequired()
-                                .HasColumnType("text[]");
+                                .HasColumnType("text");
 
                             b1.HasKey("TradeId");
 

@@ -16,17 +16,17 @@ public class RecordChanges : BackgroundService
     private readonly IEventParser _eventParser;
     private readonly IHyperSyncQuery _hyperSyncQuery;
     private readonly ILogger<RecordChanges> _logger;
-    private readonly IDbContextFactory<ApiDbContext> _dbContextFactory;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public RecordChanges(IEventParser eventParser,
         IHyperSyncQuery hyperSyncQuery,
         ILogger<RecordChanges> logger,
-        IDbContextFactory<ApiDbContext> dbContextFactory)
+        IServiceScopeFactory scopeFactory)
     {
         _eventParser = eventParser;
         _hyperSyncQuery = hyperSyncQuery;
         _logger = logger;
-        _dbContextFactory = dbContextFactory;
+        _scopeFactory = scopeFactory;
     }
     
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -35,48 +35,72 @@ public class RecordChanges : BackgroundService
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                await using var db = await _dbContextFactory.CreateDbContextAsync(stoppingToken);
-
-                var nextBlock = await db.Indexer.FirstAsync(i => i.Id == 1, stoppingToken);
+                using var scope = _scopeFactory.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<ApiDbContext>();
                 
+                var nextBlock = await db.Indexer.FirstAsync(i => i.Id == 1, stoppingToken);
+
                 var data = await _hyperSyncQuery.GetLogs(nextBlock.LastProcessedBlock);
+
+                if (!data.Data.Any())
+                {
+                    _logger.LogWarning("Got zero records");
+                    await Task.Delay(6000, stoppingToken);
+                    continue;
+                }
 
                 nextBlock.LastProcessedBlock = data.NextBlock.GetValueOrDefault(0) + 1;
                 nextBlock.UpdatedAt = DateTime.UtcNow;
+                
+                _logger.LogInformation($"NextBlock: {nextBlock.LastProcessedBlock}");
+                
+                var parsedEvents = new List<ParsedEvent>();
 
-                var parsedEvents = data.Logs.Select(log =>
+                foreach (var dt in data.Data)
                 {
-                    var blk = data.Blocks
-                        .First(b => b.Number == log.BlockNumber);
-                    
-                    var tx = data.Transactions
-                        .First(t => t.BlockNumber == log.BlockNumber 
-                        && t.TransactionIndex == log.TransactionIndex);
-
-                    var evt = _eventParser.ParseEvent(log);
-
-                    return new ParsedEvent
+                    foreach (var log in dt.Logs)
                     {
-                        Event = evt!,
-                        BlockNumber = blk.Number,
-                        BlockHash = blk.Hash!,
-                        BlockTimestamp = DateTimeOffset
-                            .FromUnixTimeSeconds(Convert.ToInt64(blk.Timestamp!, 16))
-                            .UtcDateTime,
-                        TransactionHash = tx.Hash!,
-                        TransactionFrom = tx.From!,
-                        TransactionTo = tx.To!,
-                        TransactionValue = Web3.Convert
-                            .FromWei(BigInteger.Parse(tx.Value!.RemoveHexPrefix())),
-                        LogIndex = log.LogIndex,
-                        TransactionIndex = log.TransactionIndex,
-                        LogData = log.Data!,
-                        Topic0 = log.Topic0,
-                        Topic1 = log.Topic1,
-                        Topic2 = log.Topic2,
-                        Topic3 = log.Topic3
-                    };
-                }).ToList();
+                        var blk = dt.Blocks.First(b => b.Number == log.BlockNumber);
+                        var tx = dt.Transactions.First(t =>
+                            t.BlockNumber == log.BlockNumber &&
+                            t.TransactionIndex == log.TransactionIndex);
+
+                        var evt = _eventParser.ParseEvent(log);
+
+                        if (evt is not null)
+                        {
+                            decimal priceEth = 0;
+                            switch (evt)
+                            {
+                                case ListingCreatedEvent or ListingRemovedEvent or ListingSoldEvent:
+                                    dynamic lst = evt;
+                                    
+                                    priceEth = (decimal)Web3.Convert.FromWei(lst.Price);
+                                    break;
+                            }
+                            parsedEvents.Add(new ParsedEvent
+                            {
+                                Event = evt,
+                                BlockNumber = blk.Number,
+                                BlockHash = blk.Hash!,
+                                BlockTimestamp = DateTimeOffset
+                                    .FromUnixTimeSeconds(Convert.ToInt64(blk.Timestamp, 16))
+                                    .UtcDateTime,
+                                TransactionHash = tx.Hash!,
+                                TransactionFrom = tx.From!,
+                                TransactionTo = tx.To!,
+                                Price = priceEth,
+                                LogIndex = log.LogIndex,
+                                TransactionIndex = log.TransactionIndex,
+                                LogData = log.Data!,
+                                Topic0 = log.Topic0,
+                                Topic1 = log.Topic1,
+                                Topic2 = log.Topic2,
+                                Topic3 = log.Topic3
+                            });
+                        }
+                    }
+                }
 
                 foreach (var pe in parsedEvents)
                 {
@@ -84,26 +108,44 @@ public class RecordChanges : BackgroundService
                     {
                         case ListingCreatedEvent e:
                         {
-                            var lst = new Listing
+                            try
                             {
-                                EventMetadata = new EventMetadata
+                                if (await db.Listings
+                                        .AsNoTracking()
+                                        .AnyAsync(l => l.ListingId == e.Id, cancellationToken: stoppingToken))
                                 {
-                                    BlockNumber = pe.BlockNumber,
-                                    BlockHash = pe.BlockHash,
-                                    Timestamp = pe.BlockTimestamp,
-                                    TransactionHash = pe.TransactionHash
-                                },
-                                ListingId = e.Id,
-                                NftContractAddress = e.NftContract,
-                                TokenId = e.TokenId.ToString(),
-                                SellerAddress = e.Seller,
-                                IsSold = false,
-                                IsActive = true,
-                                BuyerAddress = string.Empty
-                            };
+                                    break;
+                                }
+                                
+                                var lst = new Listing
+                                {
+                                    EventMetadata = new EventMetadata
+                                    {
+                                        BlockNumber = pe.BlockNumber,
+                                        BlockHash = pe.BlockHash,
+                                        Timestamp = pe.BlockTimestamp,
+                                        TransactionHash = pe.TransactionHash
+                                    },
+                                    ListingId = e.Id,
+                                    NftContractAddress = e.NftContract,
+                                    Price = Web3.Convert.FromWei(e.Price),
+                                    TokenId = e.TokenId,
+                                    SellerAddress = e.Seller,
+                                    IsSold = false,
+                                    IsActive = true,
+                                    BuyerAddress = string.Empty
+                                };
                             
-                            await db.Listings.AddAsync(lst, cancellationToken:  stoppingToken);
-                            await db.SaveChangesAsync(stoppingToken);
+                                await db.Listings.AddAsync(lst, cancellationToken:  stoppingToken);
+                                await db.SaveChangesAsync(stoppingToken);
+                            
+                                _logger.LogInformation($"New listing: {e.Id}");
+                            }
+                            catch (DbUpdateException ex) when((ex.InnerException is Npgsql.PostgresException pg 
+                                                              && pg.SqlState == "23505"))
+                            {
+                                _logger.LogWarning("Listing already exists, skipping insert(unique constraint)");
+                            }
                             
                             break;
                         }
@@ -148,8 +190,8 @@ public class RecordChanges : BackgroundService
                                 },
                                 From = new Peer
                                 {
-                                    /*Address = pe.,
-                                    TokenIds = e,*/
+                                    //Address = pe.,
+                                    //TokenIds = e,*/
                                     NftContracts = null
                                 }
                             };
@@ -160,7 +202,7 @@ public class RecordChanges : BackgroundService
                 }
             }
 
-            await Task.Delay(1000, cancellationToken: stoppingToken);
+            await Task.Delay(3000, cancellationToken: stoppingToken);
         }
         catch (OperationCanceledException ex)
         {
