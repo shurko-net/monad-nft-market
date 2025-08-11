@@ -2,10 +2,11 @@
 using Microsoft.EntityFrameworkCore;
 using MonadNftMarket.Context;
 using MonadNftMarket.Models;
+using MonadNftMarket.Models.ContractEvents;
 using MonadNftMarket.Models.DTO;
-using MonadNftMarket.Models.DTO.ContractEvents;
 using MonadNftMarket.Providers;
 using MonadNftMarket.Services.EventParser;
+using MonadNftMarket.Services.Monad;
 using Nethereum.Hex.HexConvertors.Extensions;
 using Nethereum.Web3;
 
@@ -17,16 +18,18 @@ public class RecordChanges : BackgroundService
     private readonly IHyperSyncQuery _hyperSyncQuery;
     private readonly ILogger<RecordChanges> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
-
+    private readonly IMonadService _monadService;
     public RecordChanges(IEventParser eventParser,
         IHyperSyncQuery hyperSyncQuery,
         ILogger<RecordChanges> logger,
-        IServiceScopeFactory scopeFactory)
+        IServiceScopeFactory scopeFactory,
+        IMonadService monadService)
     {
         _eventParser = eventParser;
         _hyperSyncQuery = hyperSyncQuery;
         _logger = logger;
         _scopeFactory = scopeFactory;
+        _monadService = monadService;
     }
     
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -179,8 +182,11 @@ public class RecordChanges : BackgroundService
                         }
                         case TradeCreatedEvent e:
                         {
+                            var tradeData = await _monadService.GetTradeData(e.TradeId, cancellationToken: stoppingToken);
+                            
                             var trade = new Trade
                             {
+                                TradeId = e.TradeId,
                                 EventMetadata = new EventMetadata
                                 {
                                     BlockNumber = pe.BlockNumber,
@@ -190,10 +196,17 @@ public class RecordChanges : BackgroundService
                                 },
                                 From = new Peer
                                 {
-                                    //Address = pe.,
-                                    //TokenIds = e,*/
-                                    NftContracts = null
-                                }
+                                    Address = tradeData.From.Address,
+                                    TokenIds = tradeData.From.TokenIds,
+                                    NftContracts = tradeData.From.NftContracts
+                                },
+                                To = new Peer
+                                {
+                                    Address = tradeData.To.Address,
+                                    TokenIds = tradeData.To.TokenIds,
+                                    NftContracts = tradeData.To.NftContracts
+                                },
+                                IsActive = tradeData.IsActive
                             };
                             
                             break;

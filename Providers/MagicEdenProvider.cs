@@ -3,7 +3,6 @@ using MonadNftMarket.Models.DTO;
 using RestSharp;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Globalization;
 
 namespace MonadNftMarket.Providers;
 
@@ -41,7 +40,7 @@ public class MagicEdenProvider : IMagicEdenProvider
 
             if (jsonDoc.RootElement.TryGetProperty("tokens", out var tokensElement))
             {
-                var tokens = JsonSerializer.Deserialize<List<TokenOwnership>>(tokensElement, new JsonSerializerOptions
+                var tokens = tokensElement.Deserialize<List<TokenOwnership>>(new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true,
                     Converters = { new JsonStringEnumConverter() },
@@ -64,22 +63,16 @@ public class MagicEdenProvider : IMagicEdenProvider
 
         } while (!string.IsNullOrEmpty(continuation));
 
-        List<UserToken> userTokens = new();
-
-        foreach (var token in allTokens)
-        {
-            userTokens.Add(new UserToken
+        return allTokens.Select(token => new UserToken
             {
-                Contract = token.Token?.Contract ?? string.Empty,
-                TokenId = token.Token?.TokenId ?? string.Empty,
-                Kind = token.Token?.Kind ?? string.Empty,
-                Name = token.Token?.Name ?? string.Empty,
-                Description = token.Token?.Description ?? string.Empty,
-                LastPrice = token.Token?.Collection?.FloorAskPrice?.Amount?.Native ?? decimal.Zero,
-                ImageOriginal = token.Token?.MetadataInfo?.ImageOriginal ?? string.Empty,
-            });
-        }
-
-        return userTokens;
+                Contract = token.Token.Contract,
+                TokenId = token.Token.TokenId,
+                Kind = token.Token.Kind,
+                Name = token.Token.Name,
+                Description = token.Token.Description,
+                LastPrice = token.Token.Collection.FloorAskPrice.Amount.Native,
+                ImageOriginal = token.Token.MetadataInfo.ImageOriginal
+            })
+            .ToList();
     }
 }

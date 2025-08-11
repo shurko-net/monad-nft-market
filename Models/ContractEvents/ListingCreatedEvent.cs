@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using Nethereum.ABI.FunctionEncoding.Attributes;
 
-namespace MonadNftMarket.Models.DTO.ContractEvents;
+namespace MonadNftMarket.Models.ContractEvents;
 
 [Event("ListingCreated")]
 public class ListingCreatedEvent : IEventDTO

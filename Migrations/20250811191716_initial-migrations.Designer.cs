@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MonadNftMarket.Migrations
 {
     [DbContext(typeof(ApiDbContext))]
-    [Migration("20250809115145_initial-migrations")]
+    [Migration("20250811191716_initial-migrations")]
     partial class initialmigrations
     {
         /// <inheritdoc />
@@ -103,7 +103,14 @@ namespace MonadNftMarket.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("TradeId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TradeId")
+                        .IsUnique();
 
                     b.ToTable("Trades");
                 });

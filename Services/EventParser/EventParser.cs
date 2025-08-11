@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using MonadNftMarket.Configuration;
-using MonadNftMarket.Models.DTO.ContractEvents;
+using MonadNftMarket.Models.ContractEvents;
 using MonadNftMarket.Models.DTO.HyperSync;
 using Nethereum.ABI.FunctionEncoding;
 using Nethereum.ABI.FunctionEncoding.Attributes;

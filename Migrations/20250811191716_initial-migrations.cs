@@ -59,6 +59,7 @@ namespace MonadNftMarket.Migrations
                     EventMetadata_BlockHash = table.Column<string>(type: "text", nullable: true),
                     EventMetadata_Timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     EventMetadata_TransactionHash = table.Column<string>(type: "text", nullable: true),
+                    TradeId = table.Column<string>(type: "text", nullable: false),
                     From_Address = table.Column<string>(type: "text", nullable: true),
                     From_TokenIds = table.Column<string>(type: "text", nullable: false),
                     From_NftContracts = table.Column<List<string>>(type: "text[]", nullable: false),
@@ -81,6 +82,12 @@ namespace MonadNftMarket.Migrations
                 name: "IX_Listings_ListingId",
                 table: "Listings",
                 column: "ListingId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Trades_TradeId",
+                table: "Trades",
+                column: "TradeId",
                 unique: true);
         }
 

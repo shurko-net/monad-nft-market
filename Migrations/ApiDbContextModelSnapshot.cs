@@ -100,7 +100,14 @@ namespace MonadNftMarket.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("TradeId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TradeId")
+                        .IsUnique();
 
                     b.ToTable("Trades");
                 });

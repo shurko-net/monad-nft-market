@@ -11,6 +11,7 @@ using MonadNftMarket.Context;
 using MonadNftMarket.Providers;
 using MonadNftMarket.Services;
 using MonadNftMarket.Services.EventParser;
+using MonadNftMarket.Services.Monad;
 using MonadNftMarket.Services.Token;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -68,6 +69,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<IMagicEdenProvider, MagicEdenProvider>();
 builder.Services.AddSingleton<IEventParser, EventParser>();
 builder.Services.AddSingleton<IHyperSyncQuery, HyperSyncQuery>();
+builder.Services.AddSingleton<IMonadService, MonadService>();
 builder.Services.AddScoped<IUserIdentity, UserIdentity>();
 
 builder.Services.AddHostedService<RecordChanges>();

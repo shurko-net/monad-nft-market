@@ -67,6 +67,13 @@ public class ApiDbContext(DbContextOptions<ApiDbContext> options) : DbContext(op
             });
         
         modelBuilder.Entity<Trade>()
+            .Property(e => e.TradeId)
+            .HasConversion(
+                v => v.ToString(),
+                v => BigInteger.Parse(v))
+            .HasColumnType("text");
+        
+        modelBuilder.Entity<Trade>()
             .OwnsOne(e => e.From, peer =>
             {
                 peer.Property(m => m.TokenIds)
@@ -84,6 +91,10 @@ public class ApiDbContext(DbContextOptions<ApiDbContext> options) : DbContext(op
         
         modelBuilder.Entity<Listing>()
             .HasIndex(l => l.ListingId)
+            .IsUnique();
+        
+        modelBuilder.Entity<Trade>()
+            .HasIndex(l => l.TradeId)
             .IsUnique();
     }
 }
