@@ -17,16 +17,21 @@ public class MarketController(
 {
     [Authorize]
     [HttpGet("user-tokens")]
-    public async Task<IActionResult> GetUserTokens()
+    public async Task<IActionResult> GetUserTokens(int page, int pageSize = 20)
     {
         var address = userIdentity.GetAddressByCookie(HttpContext);
 
-        var response = await magicEdenProvider.GetUserTokensAsync(address);
+        var userTokens = await magicEdenProvider.GetUserTokensAsync(address);
 
-        if (response.Count > 0)
-            return Ok(response);
+        if (userTokens.Count <= 0) return NotFound();
+        
+        var response = userTokens
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+            
+        return Ok(response);
 
-        return NotFound();
     }
 
     [HttpGet("market-listing")]
@@ -43,11 +48,22 @@ public class MarketController(
             .GetListingMetadataAsync(listings.Select(l => l.NftContractAddress ?? string.Empty).ToList(),
                 listings.Select(l => l.TokenId).ToList());
 
-        var response = listings.Zip(metadata, (l, m) => new
+        var response = listings.Zip(metadata, (l, m) => new ListingResponse
         {
-            Listing = l,
-            Metadata = m
-        });
+            ListingId = l.ListingId,
+            NftContractAddress = l.NftContractAddress,
+            TokenId = l.TokenId,
+            SellerAddress = l.SellerAddress,
+            Price = l.Price,
+            Metadata = new Metadata
+            {
+                Kind = m.Kind,
+                Name = m.Name,
+                ImageOriginal = m.ImageOriginal,
+                Description = m.Description,
+                LastPrice = m.LastPrice
+            }
+        }).ToList();
         
         return Ok(response);
     }
@@ -62,11 +78,34 @@ public class MarketController(
             .Take(pageSize)
             .ToListAsync();
         
-        var result = new List<TradeMetadata>();
+        var result = new List<TradeResponse>();
         
         foreach (var trade in trades)
         {
-            result.Add(await magicEdenProvider.GetTradeMetadataAsync(trade));
+            var metadata = await magicEdenProvider.GetTradeMetadataAsync(trade);
+            
+            result.Add(new TradeResponse
+            {
+                TradeId = metadata.TradeId,
+                FromAddress = metadata.FromAddress,
+                ToAddress = metadata.ToAddress,
+                FromMetadata = metadata.From.Select(m => new Metadata
+                {
+                    Kind = m.Kind,
+                    Name = m.Name,
+                    ImageOriginal = m.ImageOriginal,
+                    Description = m.Description,
+                    LastPrice = m.LastPrice
+                }),
+                ToMetadata = metadata.To.Select(m => new Metadata
+                {
+                    Kind = m.Kind,
+                    Name = m.Name,
+                    ImageOriginal = m.ImageOriginal,
+                    Description = m.Description,
+                    LastPrice = m.LastPrice
+                }),
+            });
         }
 
         return Ok(result);
