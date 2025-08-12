@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using MonadNftMarket.Configuration;
 using MonadNftMarket.Models;
 using MonadNftMarket.Models.DTO.MagicEden;
+using Nethereum.Contracts.Standards.ERC20.TokenList;
 
 namespace MonadNftMarket.Providers;
 
@@ -15,6 +16,7 @@ public class MagicEdenProvider : IMagicEdenProvider
 {
     private readonly string _userTokensUrl;
     private readonly string _tokensMetadataUrl;
+    private static readonly HttpClient _httpClient = new HttpClient();
     private IMemoryCache _cache;
     private record PageRequestArgs(string? Continuation, string UserAddress);
     public MagicEdenProvider(
@@ -52,29 +54,28 @@ public class MagicEdenProvider : IMagicEdenProvider
     }
     private static async Task<List<JsonDocument>> GetAllPagesAsync(string baseUrl)
     {
-        var client = new RestClient();
         var result = new List<JsonDocument>();
         string? continuation = null;
         
         do
         {
-            var url = string.IsNullOrEmpty(continuation)
-                ? baseUrl
-                : baseUrl.Concat($"?continuation={Uri.EscapeDataString(continuation)}").ToString();
+            var uriBuilder = new UriBuilder(baseUrl);
+            var query = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query ?? string.Empty);
+            if (!string.IsNullOrEmpty(continuation))
+                query["continuation"] = continuation;
+            uriBuilder.Query = query.ToString() ?? string.Empty;
 
-            var request = new RestRequest(url);
-            request.AddHeader("accept", "*/*");
+            var finalUrl = uriBuilder.Uri.ToString();
+            var responseStr = await _httpClient.GetStringAsync(finalUrl);
 
-            var response = await client.GetAsync(request);
-
-            if (string.IsNullOrWhiteSpace(response.Content))
+            if (string.IsNullOrWhiteSpace(responseStr))
                 break;
 
-            var jsonDoc = JsonDocument.Parse(response.Content);
+            var jsonDoc = JsonDocument.Parse(responseStr);
             result.Add(jsonDoc);
 
-            continuation = jsonDoc.RootElement
-                .TryGetProperty("continuation", out var contElem) && contElem.ValueKind == JsonValueKind.String
+            continuation = jsonDoc.RootElement.TryGetProperty("continuation", out var contElem) &&
+                           contElem.ValueKind == JsonValueKind.String
                 ? contElem.GetString()
                 : null;
         } while (!string.IsNullOrEmpty(continuation));
@@ -108,18 +109,32 @@ public class MagicEdenProvider : IMagicEdenProvider
 
     private List<UserToken> ToUserToken(List<TokensResponse> tokens)
     {
-        return tokens.Select(token => new UserToken
+        return tokens.Select(token =>
+        {
+            var t = token?.Token;
+            
+            decimal? lastPrice = t?.Collection?.FloorAskPrice?.Amount?.Native;
+            
+            var image = t?.MetadataInfo?.ImageOriginal ?? string.Empty;
+            var contract = t?.Contract ?? string.Empty;
+            var tokenId = t?.TokenId ?? string.Empty;
+            var kind = t?.Kind ?? string.Empty;
+            var name = t?.Name ?? string.Empty;
+            var description = t?.Description ?? string.Empty;
+
+            return new UserToken
             {
-                ContractAddress = token.Token.Contract,
-                TokenId = token.Token.TokenId,
-                Kind = token.Token.Kind,
-                Name = token.Token.Name,
-                Description = token.Token.Description,
-                LastPrice = token.Token.Collection.FloorAskPrice.Amount.Native,
-                ImageOriginal = token.Token.MetadataInfo.ImageOriginal
-            })
-            .ToList();
+                ContractAddress = contract,
+                TokenId = tokenId,
+                Kind = kind,
+                Name = name,
+                Description = description,
+                LastPrice = lastPrice,
+                ImageOriginal = image
+            };
+        }).ToList();
     }
+    
     public async Task<List<UserToken>> GetUserTokensAsync(string userAddress)
     {
         var cacheKey = $"{nameof(GetUserTokensAsync)}_{userAddress}";
