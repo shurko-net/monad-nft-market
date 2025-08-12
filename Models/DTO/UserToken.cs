@@ -2,7 +2,7 @@ namespace MonadNftMarket.Models.DTO;
 
 public class UserToken
 {
-    public string Contract { get; set; } = string.Empty;
+    public string ContractAddress { get; set; } = string.Empty;
     public string TokenId { get; set; } = string.Empty;
     public string Kind { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;

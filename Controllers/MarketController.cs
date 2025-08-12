@@ -31,7 +31,6 @@ public class MarketController(
             .ToList();
             
         return Ok(response);
-
     }
 
     [HttpGet("market-listing")]
@@ -51,7 +50,7 @@ public class MarketController(
         var response = listings.Zip(metadata, (l, m) => new ListingResponse
         {
             ListingId = l.ListingId,
-            NftContractAddress = l.NftContractAddress,
+            ContractAddress = l.NftContractAddress,
             TokenId = l.TokenId,
             SellerAddress = l.SellerAddress,
             Price = l.Price,

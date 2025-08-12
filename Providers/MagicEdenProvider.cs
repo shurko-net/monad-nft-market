@@ -110,7 +110,7 @@ public class MagicEdenProvider : IMagicEdenProvider
     {
         return tokens.Select(token => new UserToken
             {
-                Contract = token.Token.Contract,
+                ContractAddress = token.Token.Contract,
                 TokenId = token.Token.TokenId,
                 Kind = token.Token.Kind,
                 Name = token.Token.Name,
