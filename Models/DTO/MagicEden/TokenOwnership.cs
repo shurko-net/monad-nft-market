@@ -1,8 +1,9 @@
 using System.Text.Json.Serialization;
+using MonadNftMarket.Models.MagicEden.DTO;
 
-namespace MonadNftMarket.Models.MagicEden.DTO;
+namespace MonadNftMarket.Models.DTO.MagicEden;
 
-public class TokenOwnership
+public class TokensResponse
 {
     [JsonPropertyName("token")] public TokenInfo Token { get; set; } = null!;
     [JsonPropertyName("ownership")] public OwnershipInfo Ownership { get; set; } = null!;

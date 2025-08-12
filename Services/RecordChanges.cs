@@ -209,6 +209,9 @@ public class RecordChanges : BackgroundService
                                 IsActive = tradeData.IsActive
                             };
                             
+                            await db.Trades.AddAsync(trade, cancellationToken: stoppingToken);
+                            await db.SaveChangesAsync(stoppingToken);
+                            
                             break;
                         }
                     }

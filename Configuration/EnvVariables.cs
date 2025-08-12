@@ -8,6 +8,8 @@ public class EnvVariables
     public string AlternativeHyperSyncQueryUrl { get; set; } = string.Empty;
     public string MonadRpcUrl { get; set; } = string.Empty;
     public string ContractAddress { get; set; } = string.Empty;
+    public string MagicEdenUserTokens { get; set; } = string.Empty;
+    public string MagicEdenTokensMetadata { get; set; } = string.Empty;
 
     public static string ToEnvVariables(string pascalName)
     {

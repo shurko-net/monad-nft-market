@@ -71,6 +71,7 @@ builder.Services.AddSingleton<IEventParser, EventParser>();
 builder.Services.AddSingleton<IHyperSyncQuery, HyperSyncQuery>();
 builder.Services.AddSingleton<IMonadService, MonadService>();
 builder.Services.AddScoped<IUserIdentity, UserIdentity>();
+builder.Services.AddMemoryCache();
 
 builder.Services.AddHostedService<RecordChanges>();
 
