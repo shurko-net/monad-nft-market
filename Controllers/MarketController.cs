@@ -30,7 +30,12 @@ public class MarketController(
             .Take(pageSize)
             .ToList();
             
-        return Ok(response);
+        return Ok(new
+        {
+            response,
+            TotalValue = userTokens.Sum(t => t.LastPrice),
+            NftAmount = userTokens.Count
+        });
     }
 
     [HttpGet("market-listing")]
