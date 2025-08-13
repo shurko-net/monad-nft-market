@@ -15,11 +15,11 @@ public class MarketController(
     IMagicEdenProvider magicEdenProvider,
     ApiDbContext db) : ControllerBase
 {
-    //[Authorize]
+    [Authorize]
     [HttpGet("user-tokens")]
     public async Task<IActionResult> GetUserTokens(int page, int pageSize = 20)
     {
-        var address = "0xd365D7486Ba11856bc9b559D0e52829aC0db8745";//userIdentity.GetAddressByCookie(HttpContext);
+        var address = userIdentity.GetAddressByCookie(HttpContext);
 
         var userTokens = await magicEdenProvider.GetUserTokensAsync(address);
 
