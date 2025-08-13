@@ -1,6 +1,5 @@
 using System.Numerics;
 using MonadNftMarket.Models.DTO;
-using RestSharp;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Caching.Memory;
@@ -8,7 +7,6 @@ using Microsoft.Extensions.Options;
 using MonadNftMarket.Configuration;
 using MonadNftMarket.Models;
 using MonadNftMarket.Models.DTO.MagicEden;
-using Nethereum.Contracts.Standards.ERC20.TokenList;
 
 namespace MonadNftMarket.Providers;
 
@@ -16,9 +14,8 @@ public class MagicEdenProvider : IMagicEdenProvider
 {
     private readonly string _userTokensUrl;
     private readonly string _tokensMetadataUrl;
-    private static readonly HttpClient _httpClient = new HttpClient();
-    private IMemoryCache _cache;
-    private record PageRequestArgs(string? Continuation, string UserAddress);
+    private static readonly HttpClient HttpClient = new HttpClient();
+    private readonly IMemoryCache _cache;
     public MagicEdenProvider(
         IOptions<EnvVariables> env,
         IMemoryCache cache)
@@ -60,13 +57,13 @@ public class MagicEdenProvider : IMagicEdenProvider
         do
         {
             var uriBuilder = new UriBuilder(baseUrl);
-            var query = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query ?? string.Empty);
+            var query = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
             if (!string.IsNullOrEmpty(continuation))
                 query["continuation"] = continuation;
             uriBuilder.Query = query.ToString() ?? string.Empty;
 
             var finalUrl = uriBuilder.Uri.ToString();
-            var responseStr = await _httpClient.GetStringAsync(finalUrl);
+            var responseStr = await HttpClient.GetStringAsync(finalUrl);
 
             if (string.IsNullOrWhiteSpace(responseStr))
                 break;
@@ -111,16 +108,16 @@ public class MagicEdenProvider : IMagicEdenProvider
     {
         return tokens.Select(token =>
         {
-            var t = token?.Token;
+            var t = token.Token;
             
-            decimal? lastPrice = t?.Collection?.FloorAskPrice?.Amount?.Native;
+            var lastPrice = t.Collection.FloorAskPrice.Amount.Native;
             
-            var image = t?.MetadataInfo?.ImageOriginal ?? string.Empty;
-            var contract = t?.Contract ?? string.Empty;
-            var tokenId = t?.TokenId ?? string.Empty;
-            var kind = t?.Kind ?? string.Empty;
-            var name = t?.Name ?? string.Empty;
-            var description = t?.Description ?? string.Empty;
+            var image = t.MetadataInfo.ImageOriginal;
+            var contract = t.Contract;
+            var tokenId = t.TokenId;
+            var kind = t.Kind;
+            var name = t.Name;
+            var description = t.Description;
 
             return new UserToken
             {
