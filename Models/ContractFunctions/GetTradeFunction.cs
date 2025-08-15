@@ -4,7 +4,7 @@ using Nethereum.Contracts;
 
 namespace MonadNftMarket.Models.ContractFunctions;
 
-[Function("getTrade")]
+[Function("trades")]
 public class GetTradeFunction : FunctionMessage
 {
     [Parameter("uint256", "tradeId", 1)]

@@ -15,11 +15,15 @@ public class EventParser : IEventParser
     private readonly Dictionary<string, Func<FilterLog, IEventDTO>> _decoders;
     private readonly Web3 _web3;
     private readonly string _contractAddress;
+    private readonly ILogger<EventParser> _logger;
     
-    public EventParser(IOptions<EnvVariables> env)
+    public EventParser(
+        IOptions<EnvVariables> env,
+        ILogger<EventParser> logger)
     {
         _contractAddress = env.Value.ContractAddress;
         _web3 = new Web3(env.Value.MonadRpcUrl);
+        _logger = logger;
         
         _decoders = new Dictionary<string, Func<FilterLog, IEventDTO>>(StringComparer.OrdinalIgnoreCase);
         
@@ -44,12 +48,29 @@ public class EventParser : IEventParser
 
     public IEventDTO? ParseEvent(Log log)
     {
+        var topics = new List<object?>();
+        if(!string.IsNullOrEmpty(log.Topic0)) topics.Add(log.Topic0);
+        if(!string.IsNullOrEmpty(log.Topic1)) topics.Add(log.Topic1);
+        if(!string.IsNullOrEmpty(log.Topic2)) topics.Add(log.Topic2);
+        if(!string.IsNullOrEmpty(log.Topic3)) topics.Add(log.Topic3);
+
         var fl = new FilterLog
         {
-            Topics = [log.Topic0, log.Topic1, log.Topic2, log.Topic3],
+            Topics = topics.ToArray(),
             Data = log.Data
         };
 
-        return _decoders.TryGetValue(log.Topic0!, out var decoder) ? decoder(fl) : null;
+        if (string.IsNullOrEmpty(log.Topic0)) return null;
+
+        if (!_decoders.TryGetValue(log.Topic0, out var decoder)) return null;
+        try
+        {
+            return decoder(fl);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Failed to decode event {log.Topic0}: {ex.Message}");
+            return null;
+        }
     }
 }

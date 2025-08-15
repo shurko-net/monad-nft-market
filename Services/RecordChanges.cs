@@ -19,6 +19,7 @@ public class RecordChanges : BackgroundService
     private readonly ILogger<RecordChanges> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IMonadService _monadService;
+
     public RecordChanges(IEventParser eventParser,
         IHyperSyncQuery hyperSyncQuery,
         ILogger<RecordChanges> logger,
@@ -31,7 +32,7 @@ public class RecordChanges : BackgroundService
         _scopeFactory = scopeFactory;
         _monadService = monadService;
     }
-    
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
@@ -40,7 +41,7 @@ public class RecordChanges : BackgroundService
             {
                 using var scope = _scopeFactory.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<ApiDbContext>();
-                
+
                 var nextBlock = await db.Indexer.FirstAsync(i => i.Id == 1, stoppingToken);
 
                 var data = await _hyperSyncQuery.GetLogs(nextBlock.LastProcessedBlock);
@@ -54,9 +55,9 @@ public class RecordChanges : BackgroundService
 
                 nextBlock.LastProcessedBlock = data.NextBlock.GetValueOrDefault(0) + 1;
                 nextBlock.UpdatedAt = DateTime.UtcNow;
-                
+
                 _logger.LogInformation($"NextBlock: {nextBlock.LastProcessedBlock}");
-                
+
                 var parsedEvents = new List<ParsedEvent>();
 
                 foreach (var dt in data.Data)
@@ -77,10 +78,11 @@ public class RecordChanges : BackgroundService
                             {
                                 case ListingCreatedEvent or ListingRemovedEvent or ListingSoldEvent:
                                     dynamic lst = evt;
-                                    
+
                                     priceEth = (decimal)Web3.Convert.FromWei(lst.Price);
                                     break;
                             }
+
                             parsedEvents.Add(new ParsedEvent
                             {
                                 Event = evt,
@@ -119,7 +121,7 @@ public class RecordChanges : BackgroundService
                                 {
                                     break;
                                 }
-                                
+
                                 var lst = new Listing
                                 {
                                     EventMetadata = new EventMetadata
@@ -138,18 +140,18 @@ public class RecordChanges : BackgroundService
                                     IsActive = true,
                                     BuyerAddress = string.Empty
                                 };
-                            
-                                await db.Listings.AddAsync(lst, cancellationToken:  stoppingToken);
+
+                                await db.Listings.AddAsync(lst, cancellationToken: stoppingToken);
                                 await db.SaveChangesAsync(stoppingToken);
-                            
+
                                 _logger.LogInformation($"New listing: {e.Id}");
                             }
-                            catch (DbUpdateException ex) when((ex.InnerException is Npgsql.PostgresException pg 
-                                                              && pg.SqlState == "23505"))
+                            catch (DbUpdateException ex) when ((ex.InnerException is Npgsql.PostgresException pg
+                                                                && pg.SqlState == "23505"))
                             {
                                 _logger.LogWarning("Listing already exists, skipping insert(unique constraint)");
                             }
-                            
+
                             break;
                         }
                         case ListingRemovedEvent e:
@@ -162,11 +164,12 @@ public class RecordChanges : BackgroundService
                                 db.Remove(lst);
                                 await db.SaveChangesAsync(stoppingToken);
                             }
-                            break;                            
+
+                            break;
                         }
                         case ListingSoldEvent e:
                         {
-                            var lst = await db.Listings.FirstOrDefaultAsync(l => 
+                            var lst = await db.Listings.FirstOrDefaultAsync(l =>
                                 l.ListingId == e.Id, cancellationToken: stoppingToken);
 
                             if (lst is not null)
@@ -174,16 +177,17 @@ public class RecordChanges : BackgroundService
                                 lst.BuyerAddress = e.Buyer;
                                 lst.IsSold = true;
                                 lst.IsActive = false;
-                                
+
                                 await db.SaveChangesAsync(stoppingToken);
                             }
-                            
+
                             break;
                         }
                         case TradeCreatedEvent e:
                         {
-                            var tradeData = await _monadService.GetTradeData(e.TradeId, cancellationToken: stoppingToken);
-                            
+                            var tradeData =
+                                await _monadService.GetTradeDataAsync(e.TradeId, cancellationToken: stoppingToken);
+
                             var trade = new Trade
                             {
                                 TradeId = e.TradeId,
@@ -196,21 +200,39 @@ public class RecordChanges : BackgroundService
                                 },
                                 From = new Peer
                                 {
-                                    Address = tradeData.From.Address,
+                                    Address = tradeData.From.User,
                                     TokenIds = tradeData.From.TokenIds,
                                     NftContracts = tradeData.From.NftContracts
                                 },
                                 To = new Peer
                                 {
-                                    Address = tradeData.To.Address,
+                                    Address = tradeData.To.User,
                                     TokenIds = tradeData.To.TokenIds,
                                     NftContracts = tradeData.To.NftContracts
                                 },
                                 IsActive = tradeData.IsActive
                             };
-                            
+
                             await db.Trades.AddAsync(trade, cancellationToken: stoppingToken);
                             await db.SaveChangesAsync(stoppingToken);
+
+                            break;
+                        }
+                        case TradeAcceptedEvent e:
+                        {
+                            await CloseTradeAsync(e.TradeId, db, stoppingToken);
+                            
+                            break;
+                        }
+                        case TradeCompletedEvent e:
+                        {
+                            await CloseTradeAsync(e.TradeId, db, stoppingToken);
+                            
+                            break;
+                        }
+                        case TradeRejectedEvent e:
+                        {
+                            await CloseTradeAsync(e.TradeId, db, stoppingToken);
                             
                             break;
                         }
@@ -224,5 +246,20 @@ public class RecordChanges : BackgroundService
         {
             _logger.LogCritical($"Operation cancelled exception: {ex}");
         }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Unexpected exception: {ex}");
+        }
     }
+    private async Task CloseTradeAsync(BigInteger tradeId, ApiDbContext db, CancellationToken stoppingToken)
+    {
+        var trade = await db.Trades.FirstOrDefaultAsync(t => t.TradeId == tradeId,
+            cancellationToken: stoppingToken);
+
+        if (trade is null) return;
+
+        trade.IsActive = false;
+        await db.SaveChangesAsync(stoppingToken);
+    }
+
 }

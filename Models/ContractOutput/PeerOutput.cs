@@ -7,7 +7,7 @@ namespace MonadNftMarket.Models.ContractOutput;
 public class PeerOutput : IFunctionOutputDTO
 {
     [Parameter("address", "user", 1)]
-    public string Address { get; set; } = string.Empty;
+    public string User { get; set; } = string.Empty;
     [Parameter("uint256[]", "tokenIds", 2)]
     public List<BigInteger> TokenIds { get; set; } = new();
     [Parameter("address[]", "nftContracts", 3)]

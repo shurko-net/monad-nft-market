@@ -4,7 +4,7 @@ namespace MonadNftMarket.Models;
 
 public class Listing
 {
-    public Guid Id { get; set; }
+    public Guid Id { get; set; } = Guid.CreateVersion7();
     public EventMetadata EventMetadata { get; set; } = new();
     public BigInteger ListingId { get; set; }
     public string? NftContractAddress { get; set; }

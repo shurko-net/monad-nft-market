@@ -11,6 +11,7 @@ public class ApiDbContext(DbContextOptions<ApiDbContext> options) : DbContext(op
     public DbSet<Listing> Listings { get; set; }
     public DbSet<Trade> Trades { get; set; }
     public DbSet<IndexerState> Indexer { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

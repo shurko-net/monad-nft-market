@@ -3,15 +3,20 @@ using MonadNftMarket.Configuration;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.CookiePolicy;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MonadNftMarket.Context;
+using MonadNftMarket.Filters;
+using MonadNftMarket.Hubs;
 using MonadNftMarket.Providers;
 using MonadNftMarket.Services;
 using MonadNftMarket.Services.EventParser;
 using MonadNftMarket.Services.Monad;
+using MonadNftMarket.Services.Notifications;
 using MonadNftMarket.Services.Token;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -63,6 +68,13 @@ builder.Services.AddControllers()
         opts.JsonSerializerOptions.Converters.Add(new BigIntegerJsonConverter());
         opts.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     });
+builder.Services.AddSignalR()
+    .AddHubOptions<NotificationHub>(opts => opts.AddFilter<HubAuthorize>())
+    .AddJsonProtocol(options =>
+    {
+        options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true;
+        options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -70,6 +82,7 @@ builder.Services.AddSingleton<IMagicEdenProvider, MagicEdenProvider>();
 builder.Services.AddSingleton<IEventParser, EventParser>();
 builder.Services.AddSingleton<IHyperSyncQuery, HyperSyncQuery>();
 builder.Services.AddSingleton<IMonadService, MonadService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IUserIdentity, UserIdentity>();
 builder.Services.AddMemoryCache();
 
@@ -159,5 +172,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<NotificationHub>("/notificationHub");
 
 app.Run();

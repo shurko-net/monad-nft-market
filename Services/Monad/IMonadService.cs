@@ -5,5 +5,5 @@ namespace MonadNftMarket.Services.Monad;
 
 public interface IMonadService
 {
-    Task<GetTradeOutput> GetTradeData(BigInteger tradeId, CancellationToken cancellationToken = default);
+    Task<GetTradeOutput> GetTradeDataAsync(BigInteger tradeId, CancellationToken cancellationToken = default);
 }

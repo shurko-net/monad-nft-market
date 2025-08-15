@@ -4,7 +4,7 @@ namespace MonadNftMarket.Models;
 
 public class Trade
 {
-    public Guid Id { get; set; }
+    public Guid Id { get; set; } = Guid.CreateVersion7();
     public EventMetadata EventMetadata { get; set; } = new();
     public BigInteger TradeId { get; set; }
     public Peer From { get; set; } = new();

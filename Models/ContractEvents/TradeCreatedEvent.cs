@@ -12,6 +12,6 @@ public class TradeCreatedEvent : IEventDTO
     [Parameter("address", "from", 2, true)]
     public string? From { get; set; }
     
-    [Parameter("address", "to", 2, true)]
+    [Parameter("address", "to", 3, true)]
     public string? To { get; set; }
 }
