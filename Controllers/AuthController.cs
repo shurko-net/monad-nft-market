@@ -102,7 +102,7 @@ public class AuthController(
                 Secure = true,
                 HttpOnly = true,
                 SameSite = SameSiteMode.None,
-                Expires = DateTime.UtcNow.AddDays(1)
+                Expires = DateTime.UtcNow.AddDays(30)
             });
     }
     private void RemoveCookie(HttpContext httpContext)

@@ -5,11 +5,11 @@ namespace MonadNftMarket.Models.MagicEden.DTO;
 public class MetadataInfo
 {
     [JsonPropertyName("imageOriginal")]
-    public string ImageOriginal { get; set; } = string.Empty;
+    public string? ImageOriginal { get; set; }
 
     [JsonPropertyName("imageMimeType")]
-    public string ImageMimeType { get; set; } = string.Empty;
+    public string? ImageMimeType { get; set; }
 
     [JsonPropertyName("tokenURI")]
-    public string TokenURI { get; set; } = string.Empty;
+    public string? TokenUri { get; set; }
 }

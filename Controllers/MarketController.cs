@@ -15,15 +15,16 @@ public class MarketController(
     IMagicEdenProvider magicEdenProvider,
     ApiDbContext db) : ControllerBase
 {
-    [Authorize]
+    //[Authorize]
     [HttpGet("user-tokens")]
     public async Task<IActionResult> GetUserTokens(int page, int pageSize = 20)
     {
-        var address = userIdentity.GetAddressByCookie(HttpContext);
+        var address = "0xd365D7486Ba11856bc9b559D0e52829aC0db8745";//userIdentity.GetAddressByCookie(HttpContext);
 
         var userTokens = await magicEdenProvider.GetUserTokensAsync(address);
-
-        if (userTokens.Count <= 0) return NotFound();
+        
+        page = Math.Max(1, page);
+        pageSize = Math.Max(1, pageSize);
         
         var response = userTokens
             .Skip((page - 1) * pageSize)
@@ -33,7 +34,7 @@ public class MarketController(
         return Ok(new
         {
             response,
-            TotalValue = userTokens.Sum(t => t.LastPrice),
+            TotalValue = userTokens.Sum(t => t.LastPrice ?? 0m),
             NftAmount = userTokens.Count
         });
     }
@@ -41,6 +42,9 @@ public class MarketController(
     [HttpGet("market-listing")]
     public async Task<IActionResult> GetMarketListing(int page, int pageSize = 10)
     {
+        page = Math.Max(1, page);
+        pageSize = Math.Max(1, pageSize);
+        
         var listings = await db.Listings
             .AsNoTracking()
             .Where(l => l.IsActive)
@@ -75,6 +79,9 @@ public class MarketController(
     [HttpGet("trades")]
     public async Task<IActionResult> GetTrades(int page, int pageSize = 10)
     {
+        page = Math.Max(1, page);
+        pageSize = Math.Max(1, pageSize);
+        
         var trades = await db.Trades
             .AsNoTracking()
             .Where(t => t.IsActive)

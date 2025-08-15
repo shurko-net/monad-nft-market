@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace MonadNftMarket.Models.MagicEden.DTO;
+namespace MonadNftMarket.Models.DTO.MagicEden;
 
 public class OwnershipInfo
 {

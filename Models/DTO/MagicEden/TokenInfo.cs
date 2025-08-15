@@ -1,28 +1,29 @@
 using System.Text.Json.Serialization;
+using MonadNftMarket.Models.MagicEden.DTO;
 
-namespace MonadNftMarket.Models.MagicEden.DTO;
+namespace MonadNftMarket.Models.DTO.MagicEden;
 
 public class TokenInfo
 {
-    [JsonPropertyName("chainId")] public int ChainId { get; set; }
-    [JsonPropertyName("contract")] public string Contract { get; set; } = string.Empty;
-    [JsonPropertyName("tokenId")] public string TokenId { get; set; } = string.Empty;
-    [JsonPropertyName("kind")] public string Kind { get; set; } = string.Empty;
-    [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
-    [JsonPropertyName("image")] public string Image { get; set; } = string.Empty;
-    [JsonPropertyName("imageSmall")] public string ImageSmall { get; set; } = string.Empty;
-    [JsonPropertyName("imageLarge")] public string ImageLarge { get; set; } = string.Empty;
-    [JsonPropertyName("metadata")] public MetadataInfo MetadataInfo { get; set; } = null!;
-    [JsonPropertyName("description")] public string Description { get; set; } = string.Empty;
+    [JsonPropertyName("chainId")] public int? ChainId { get; set; }
+    [JsonPropertyName("contract")] public string? Contract { get; set; }
+    [JsonPropertyName("tokenId")] public string? TokenId { get; set; }
+    [JsonPropertyName("kind")] public string? Kind { get; set; }
+    [JsonPropertyName("name")] public string? Name { get; set; }
+    [JsonPropertyName("image")] public string? Image { get; set; }
+    [JsonPropertyName("imageSmall")] public string? ImageSmall { get; set; }
+    [JsonPropertyName("imageLarge")] public string? ImageLarge { get; set; }
+    [JsonPropertyName("metadata")] public MetadataInfo? MetadataInfo { get; set; }
+    [JsonPropertyName("description")] public string? Description { get; set; }
     [JsonPropertyName("rarityScore")] public decimal? RarityScore { get; set; }
     [JsonPropertyName("rarityRank")] public decimal? RarityRank { get; set; }
-    [JsonPropertyName("supply")] public string Supply { get; set; } = string.Empty;
-    [JsonPropertyName("remainingSupply")] public string RemainingSupply { get; set; } = string.Empty;
-    [JsonPropertyName("media")] public string Media { get; set; } = string.Empty;
-    [JsonPropertyName("isFlagged")] public bool IsFlagged { get; set; }
-    [JsonPropertyName("isSpam")] public bool IsSpam { get; set; }
-    [JsonPropertyName("metadataDisabled")] public bool MetadataDisabled { get; set; }
-    [JsonPropertyName("lastFlagUpdate")] public string LastFlagUpdate { get; set; } = string.Empty;
-    [JsonPropertyName("lastFlagChange")] public string LastFlagChange { get; set; } = string.Empty;
-    [JsonPropertyName("collection")] public CollectionInfo Collection { get; set; } = null!;
+    [JsonPropertyName("supply")] public string? Supply { get; set; }
+    [JsonPropertyName("remainingSupply")] public string? RemainingSupply { get; set; }
+    [JsonPropertyName("media")] public string? Media { get; set; }
+    [JsonPropertyName("isFlagged")] public bool? IsFlagged { get; set; }
+    [JsonPropertyName("isSpam")] public bool? IsSpam { get; set; }
+    [JsonPropertyName("metadataDisabled")] public bool? MetadataDisabled { get; set; }
+    [JsonPropertyName("lastFlagUpdate")] public string? LastFlagUpdate { get; set; }
+    [JsonPropertyName("lastFlagChange")] public string? LastFlagChange { get; set; }
+    [JsonPropertyName("collection")] public CollectionInfo? Collection { get; set; }
 }

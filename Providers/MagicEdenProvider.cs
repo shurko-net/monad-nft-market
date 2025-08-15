@@ -14,15 +14,18 @@ public class MagicEdenProvider : IMagicEdenProvider
 {
     private readonly string _userTokensUrl;
     private readonly string _tokensMetadataUrl;
-    private static readonly HttpClient HttpClient = new HttpClient();
+    private static readonly HttpClient HttpClient = new();
     private readonly IMemoryCache _cache;
+    private readonly ILogger<MagicEdenProvider> _logger;
     public MagicEdenProvider(
         IOptions<EnvVariables> env,
-        IMemoryCache cache)
+        IMemoryCache cache,
+        ILogger<MagicEdenProvider> logger)
     {
         _userTokensUrl = env.Value.MagicEdenUserTokens;
         _tokensMetadataUrl = env.Value.MagicEdenTokensMetadata;
         _cache = cache;
+        _logger = logger;
     }
     private string BuildUserTokensUrl(string userAddress)
     {
@@ -49,7 +52,7 @@ public class MagicEdenProvider : IMagicEdenProvider
         
         return _tokensMetadataUrl + "?" + string.Join("&", qsParts);
     }
-    private static async Task<List<JsonDocument>> GetAllPagesAsync(string baseUrl)
+    private async Task<List<JsonDocument>> GetAllPagesAsync(string baseUrl)
     {
         var result = new List<JsonDocument>();
         string? continuation = null;
@@ -85,51 +88,56 @@ public class MagicEdenProvider : IMagicEdenProvider
         var allTokens = new List<TokensResponse>();
         var pages = await GetAllPagesAsync(url);
 
-        foreach (var page in pages)
+        try
         {
-            if (page.RootElement.TryGetProperty("tokens", out var tokensElement))
+            foreach (var page in pages)
             {
-                var tokens = tokensElement.Deserialize<List<TokensResponse>>(new JsonSerializerOptions
+                if (page.RootElement.TryGetProperty("tokens", out var tokensElement))
                 {
-                    PropertyNameCaseInsensitive = true,
-                    Converters = { new JsonStringEnumConverter() },
-                    NumberHandling = JsonNumberHandling.AllowReadingFromString
-                });
+                    var tokens = tokensElement.Deserialize<List<TokensResponse>>(new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true,
+                        Converters = { new JsonStringEnumConverter() },
+                        NumberHandling = JsonNumberHandling.AllowReadingFromString
+                    });
 
-                if (tokens != null)
-                    allTokens.AddRange(tokens);
+                    if (tokens != null)
+                        allTokens.AddRange(tokens);
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogInformation($"Error in {nameof(DeserializeMetadata)}: {ex.Message}");
         }
         
         return allTokens;
     }
 
-    private List<UserToken> ToUserToken(List<TokensResponse> tokens)
+    private List<UserToken> ToUserToken(List<TokensResponse>? tokens)
     {
-        return tokens.Select(token =>
-        {
-            var t = token.Token;
-            
-            var lastPrice = t.Collection.FloorAskPrice.Amount.Native;
-            
-            var image = t.MetadataInfo.ImageOriginal;
-            var contract = t.Contract;
-            var tokenId = t.TokenId;
-            var kind = t.Kind;
-            var name = t.Name;
-            var description = t.Description;
+        var result = new List<UserToken>();
 
+        if (tokens == null || tokens.Count == 0)
+            return result;
+        
+        return tokens .Select(x =>
+        {
+            var t = x.Token;
+            
             return new UserToken
             {
-                ContractAddress = contract,
-                TokenId = tokenId,
-                Kind = kind,
-                Name = name,
-                Description = description,
-                LastPrice = lastPrice,
-                ImageOriginal = image
+                ContractAddress = t.Contract ?? string.Empty,
+                TokenId = t.TokenId ?? string.Empty,
+                Kind = t.Kind ?? string.Empty,
+                Name = t.Name ?? string.Empty,
+                ImageOriginal = t.MetadataInfo?.ImageOriginal
+                                ?? t.Image
+                                ?? string.Empty,
+                Description = t.Description ?? string.Empty,
+                LastPrice = t.Collection?.FloorAskPrice?.Amount?.Native ?? 0m
             };
-        }).ToList();
+        }) .ToList();
     }
     
     public async Task<List<UserToken>> GetUserTokensAsync(string userAddress)

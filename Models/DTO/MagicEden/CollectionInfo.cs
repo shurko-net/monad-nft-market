@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
+using MonadNftMarket.Models.MagicEden.DTO;
 
-namespace MonadNftMarket.Models.MagicEden.DTO;
+namespace MonadNftMarket.Models.DTO.MagicEden;
 
 public class CollectionInfo
 {
@@ -8,16 +9,16 @@ public class CollectionInfo
     public string Id { get; set; } = string.Empty;
 
     [JsonPropertyName("name")]
-    public string Name { get; set; } = string.Empty;
+    public string? Name { get; set; }
 
     [JsonPropertyName("slug")]
-    public string Slug { get; set; } = string.Empty;
+    public string? Slug { get; set; }
 
     [JsonPropertyName("symbol")]
-    public string Symbol { get; set; } = string.Empty;
+    public string? Symbol { get; set; }
 
     [JsonPropertyName("imageUrl")]
-    public string ImageUrl { get; set; } = string.Empty;
+    public string? ImageUrl { get; set; } 
 
     [JsonPropertyName("isSpam")]
     public bool IsSpam { get; set; }
@@ -26,7 +27,7 @@ public class CollectionInfo
     public bool MetadataDisabled { get; set; }
 
     [JsonPropertyName("openseaVerificationStatus")]
-    public string OpenseaVerificationStatus { get; set; } = string.Empty;
+    public string? OpenseaVerificationStatus { get; set; }
 
     [JsonPropertyName("floorAskPrice")]
     public FloorAskPriceInfo FloorAskPrice { get; set; } = null!;
