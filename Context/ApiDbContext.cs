@@ -15,11 +15,11 @@ public class ApiDbContext(DbContextOptions<ApiDbContext> options) : DbContext(op
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        var bigIntListConverter 
-            = new ValueConverter<List<BigInteger>, string>(
-                toDb     => JsonSerializer.Serialize(toDb, (JsonSerializerOptions?)null),
-                fromDb   => JsonSerializer.Deserialize<List<BigInteger>>(fromDb, (JsonSerializerOptions?)null) 
-                            ?? new List<BigInteger>());
+        var bigIntListConverter = new ValueConverter<List<BigInteger>, string>(
+            toDb   => JsonSerializer.Serialize(toDb.Select(b => b.ToString()), (JsonSerializerOptions?)null),
+            fromDb => JsonSerializer.Deserialize<List<string>>(fromDb, (JsonSerializerOptions?)null)!
+                .Select(BigInteger.Parse).ToList()
+        );
         
         modelBuilder.Entity<IndexerState>()
             .HasData(new IndexerState

@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MonadNftMarket.Migrations
 {
     [DbContext(typeof(ApiDbContext))]
-    [Migration("20250815134657_initial-migrations")]
+    [Migration("20250815135959_initial-migrations")]
     partial class initialmigrations
     {
         /// <inheritdoc />
