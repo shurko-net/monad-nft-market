@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using MonadNftMarket.Context;
+using MonadNftMarket.Models;
 using MonadNftMarket.Models.DTO;
 
 namespace MonadNftMarket.Controllers;
@@ -51,6 +52,9 @@ public class MarketController(
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
+        
+        if(listings.Count == 0)
+            return Ok(Array.Empty<ListingResponse>());
         
         var metadata = await magicEdenProvider
             .GetListingMetadataAsync(listings.Select(l => l.NftContractAddress ?? string.Empty).ToList(),

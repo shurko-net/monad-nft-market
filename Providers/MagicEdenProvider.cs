@@ -66,6 +66,7 @@ public class MagicEdenProvider : IMagicEdenProvider
             uriBuilder.Query = query.ToString() ?? string.Empty;
 
             var finalUrl = uriBuilder.Uri.ToString();
+            _logger.LogCritical($"finalUrl: {finalUrl}");
             var responseStr = await HttpClient.GetStringAsync(finalUrl);
 
             if (string.IsNullOrWhiteSpace(responseStr))
