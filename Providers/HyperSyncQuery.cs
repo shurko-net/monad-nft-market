@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Options;
 using MonadNftMarket.Configuration;
 using MonadNftMarket.Models.DTO.HyperSync;
+using Nethereum.Web3;
 
 namespace MonadNftMarket.Providers;
 
@@ -10,8 +11,9 @@ public class HyperSyncQuery : IHyperSyncQuery
 {
     private readonly HttpClient _httpClient;
     private readonly string _hyperSyncQueryUrl;
-    private readonly string _alternativeHyperSyncQueryUrl;
     private readonly string _contractAddress;
+    private readonly Web3 _web3;
+    private readonly int _blocksForConfirmation; 
 
     public HyperSyncQuery(IOptions<EnvVariables> env)
     {
@@ -19,16 +21,19 @@ public class HyperSyncQuery : IHyperSyncQuery
         var envValue = env.Value;
         
         _hyperSyncQueryUrl = envValue.HyperSyncQueryUrl;
-        _alternativeHyperSyncQueryUrl = envValue.AlternativeHyperSyncQueryUrl;
         _contractAddress = envValue.ContractAddress;
+        _blocksForConfirmation = envValue.BlocksForConfirmation;
+        
+        _web3 = new Web3(envValue.MonadRpcUrl);
     }
 
-    public async Task<Root> GetLogs(BigInteger nextBlock)
+    public async Task<Root> GetLogs(BigInteger fromBlock)
     {
-        Console.WriteLine($"Next block in GetLogs: {nextBlock.ToString()}");
+        var latestBlock = await _web3.Eth.Blocks.GetBlockNumber.SendRequestAsync();
         var payload = new
         {
-            from_block = (ulong)nextBlock,
+            from_block = (ulong)fromBlock,
+            to_block = (ulong)(latestBlock.Value - _blocksForConfirmation),
             logs = new[]
             {
                 new { address = new[] { _contractAddress } }

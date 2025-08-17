@@ -36,6 +36,9 @@ public class MagicEdenProvider : IMagicEdenProvider
     }
     private string BuildTokensMetadataUrl(Peer peer)
     {
+        if(peer.NftContracts.Count == 0 || peer.TokenIds.Count == 0)
+            _logger.LogCritical("No BuildTokensMetadataUrl contracts found");
+        
         var zip = peer.NftContracts.Zip(peer.TokenIds,
             (contract, id) => $"{contract}:{id}");
         
@@ -45,6 +48,9 @@ public class MagicEdenProvider : IMagicEdenProvider
     }
     private string BuildTokensMetadataUrl(List<string> contracts, List<BigInteger> ids)
     {
+        if(contracts.Count == 0 || ids.Count == 0)
+            return string.Empty;
+        
         var zip = contracts.Zip(ids,
             (contract, id) => $"{contract}:{id}");
         
@@ -55,6 +61,13 @@ public class MagicEdenProvider : IMagicEdenProvider
     private async Task<List<JsonDocument>> GetAllPagesAsync(string baseUrl)
     {
         var result = new List<JsonDocument>();
+
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            _logger.LogError("baseUrl is required in GetAllPagesAsync: " + baseUrl);
+            return result;
+        }
+        
         string? continuation = null;
         
         do
@@ -66,7 +79,6 @@ public class MagicEdenProvider : IMagicEdenProvider
             uriBuilder.Query = query.ToString() ?? string.Empty;
 
             var finalUrl = uriBuilder.Uri.ToString();
-            _logger.LogCritical($"finalUrl: {finalUrl}");
             var responseStr = await HttpClient.GetStringAsync(finalUrl);
 
             if (string.IsNullOrWhiteSpace(responseStr))
@@ -87,6 +99,10 @@ public class MagicEdenProvider : IMagicEdenProvider
     private async Task<List<TokensResponse>> DeserializeMetadata(string url)
     {
         var allTokens = new List<TokensResponse>();
+
+        if (string.IsNullOrWhiteSpace(url))
+            return allTokens;
+        
         var pages = await GetAllPagesAsync(url);
 
         try
@@ -210,6 +226,8 @@ public class MagicEdenProvider : IMagicEdenProvider
     public async Task<List<UserToken>> GetListingMetadataAsync(List<string> contracts, List<BigInteger> ids)
     {
         var url = BuildTokensMetadataUrl(contracts, ids);
+        if(string.IsNullOrEmpty(url))
+            return [];
         var allTokens = await DeserializeMetadata(url);   
 
         return ToUserToken(allTokens);

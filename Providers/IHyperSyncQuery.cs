@@ -5,5 +5,5 @@ namespace MonadNftMarket.Providers;
 
 public interface IHyperSyncQuery
 {
-    public Task<Root> GetLogs(BigInteger nextBlock);
+    public Task<Root> GetLogs(BigInteger fromBlock);
 }

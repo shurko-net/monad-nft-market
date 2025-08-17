@@ -7,7 +7,7 @@ using MonadNftMarket.Models.DTO;
 using MonadNftMarket.Providers;
 using MonadNftMarket.Services.EventParser;
 using MonadNftMarket.Services.Monad;
-using Nethereum.Hex.HexConvertors.Extensions;
+using Nethereum.Util;
 using Nethereum.Web3;
 
 namespace MonadNftMarket.Services;
@@ -49,7 +49,7 @@ public class RecordChanges : BackgroundService
                 if (!data.Data.Any())
                 {
                     _logger.LogWarning("Got zero records");
-                    await Task.Delay(6000, stoppingToken);
+                    await Task.Delay(500, stoppingToken);
                     continue;
                 }
 
@@ -71,39 +71,38 @@ public class RecordChanges : BackgroundService
 
                         var evt = _eventParser.ParseEvent(log);
 
-                        if (evt is not null)
+                        if (evt is null) continue;
+                        
+                        decimal priceEth = 0;
+                        switch (evt)
                         {
-                            decimal priceEth = 0;
-                            switch (evt)
-                            {
-                                case ListingCreatedEvent or ListingRemovedEvent or ListingSoldEvent:
-                                    dynamic lst = evt;
+                            case ListingCreatedEvent or ListingRemovedEvent or ListingSoldEvent:
+                                dynamic lst = evt;
 
-                                    priceEth = (decimal)Web3.Convert.FromWei(lst.Price);
-                                    break;
-                            }
-
-                            parsedEvents.Add(new ParsedEvent
-                            {
-                                Event = evt,
-                                BlockNumber = blk.Number,
-                                BlockHash = blk.Hash!,
-                                BlockTimestamp = DateTimeOffset
-                                    .FromUnixTimeSeconds(Convert.ToInt64(blk.Timestamp, 16))
-                                    .UtcDateTime,
-                                TransactionHash = tx.Hash!,
-                                TransactionFrom = tx.From!,
-                                TransactionTo = tx.To!,
-                                Price = priceEth,
-                                LogIndex = log.LogIndex,
-                                TransactionIndex = log.TransactionIndex,
-                                LogData = log.Data!,
-                                Topic0 = log.Topic0,
-                                Topic1 = log.Topic1,
-                                Topic2 = log.Topic2,
-                                Topic3 = log.Topic3
-                            });
+                                priceEth = (decimal)Web3.Convert.FromWei(lst.Price);
+                                break;
                         }
+
+                        parsedEvents.Add(new ParsedEvent
+                        {
+                            Event = evt,
+                            BlockNumber = blk.Number,
+                            BlockHash = blk.Hash!,
+                            BlockTimestamp = DateTimeOffset
+                                .FromUnixTimeSeconds(Convert.ToInt64(blk.Timestamp, 16))
+                                .UtcDateTime,
+                            TransactionHash = tx.Hash!,
+                            TransactionFrom = tx.From!,
+                            TransactionTo = tx.To!,
+                            Price = priceEth,
+                            LogIndex = log.LogIndex,
+                            TransactionIndex = log.TransactionIndex,
+                            LogData = log.Data!,
+                            Topic0 = log.Topic0,
+                            Topic1 = log.Topic1,
+                            Topic2 = log.Topic2,
+                            Topic3 = log.Topic3
+                        });
                     }
                 }
 
@@ -187,7 +186,11 @@ public class RecordChanges : BackgroundService
                         {
                             var tradeData =
                                 await _monadService.GetTradeDataAsync(e.TradeId, cancellationToken: stoppingToken);
-
+                            
+                            if(tradeData.To.User.Equals(AddressUtil.ZERO_ADDRESS) ||
+                               tradeData.From.User.Equals(AddressUtil.ZERO_ADDRESS))
+                                break;
+                            
                             var trade = new Trade
                             {
                                 TradeId = e.TradeId,
@@ -210,7 +213,7 @@ public class RecordChanges : BackgroundService
                                     TokenIds = tradeData.To.TokenIds,
                                     NftContracts = tradeData.To.NftContracts
                                 },
-                                IsActive = tradeData.IsActive
+                                IsActive = true
                             };
 
                             await db.Trades.AddAsync(trade, cancellationToken: stoppingToken);
@@ -240,7 +243,7 @@ public class RecordChanges : BackgroundService
                 }
             }
 
-            await Task.Delay(3000, cancellationToken: stoppingToken);
+            await Task.Delay(200, cancellationToken: stoppingToken);
         }
         catch (OperationCanceledException ex)
         {
@@ -251,7 +254,7 @@ public class RecordChanges : BackgroundService
             _logger.LogError($"Unexpected exception: {ex}");
         }
     }
-    private async Task CloseTradeAsync(BigInteger tradeId, ApiDbContext db, CancellationToken stoppingToken)
+    private static async Task CloseTradeAsync(BigInteger tradeId, ApiDbContext db, CancellationToken stoppingToken)
     {
         var trade = await db.Trades.FirstOrDefaultAsync(t => t.TradeId == tradeId,
             cancellationToken: stoppingToken);

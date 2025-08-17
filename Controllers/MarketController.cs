@@ -14,7 +14,8 @@ namespace MonadNftMarket.Controllers;
 public class MarketController(
     IUserIdentity userIdentity,
     IMagicEdenProvider magicEdenProvider,
-    ApiDbContext db) : ControllerBase
+    ApiDbContext db,
+    ILogger<MarketController> logger) : ControllerBase
 {
     [Authorize]
     [HttpGet("user-tokens")]
@@ -91,7 +92,13 @@ public class MarketController(
             .Where(t => t.IsActive)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
+            .Include(t => t.From)
+            .Include(t => t.To)
+            .AsSplitQuery()
             .ToListAsync();
+        
+        if(trades.Count == 0)
+            return Ok(Array.Empty<TradeResponse>());
         
         var result = new List<TradeResponse>();
         

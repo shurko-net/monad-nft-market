@@ -5,11 +5,11 @@ public class EnvVariables
     public string JwtTokenSecret { get; set; } = string.Empty;
     public string CookieName { get; set; } = string.Empty;
     public string HyperSyncQueryUrl { get; set; } = string.Empty;
-    public string AlternativeHyperSyncQueryUrl { get; set; } = string.Empty;
     public string MonadRpcUrl { get; set; } = string.Empty;
     public string ContractAddress { get; set; } = string.Empty;
     public string MagicEdenUserTokens { get; set; } = string.Empty;
     public string MagicEdenTokensMetadata { get; set; } = string.Empty;
+    public int BlocksForConfirmation { get; set; } 
 
     public static string ToEnvVariables(string pascalName)
     {
