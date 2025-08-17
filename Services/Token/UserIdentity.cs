@@ -1,4 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using MonadNftMarket.Configuration;
 
@@ -26,4 +28,24 @@ public class UserIdentity(IOptions<EnvVariables> env) : IUserIdentity
             return string.Empty;
         }
     }
+
+    public string? GetUserId(HubConnectionContext connection)
+    {
+        var user = connection.User;
+        
+        var sub = user.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+
+        if (!string.IsNullOrEmpty(sub)) return NormalizeAddress(sub);
+        
+        var address = user.FindFirst("address")?.Value;
+        if (!string.IsNullOrEmpty(address)) return NormalizeAddress(address);
+        
+        var nameId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrEmpty(nameId)) return NormalizeAddress(nameId);
+        
+        return null;
+    }
+    
+    private static string NormalizeAddress(string addr) =>
+        addr.Trim().ToLowerInvariant();
 }

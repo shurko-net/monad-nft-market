@@ -7,6 +7,7 @@ using MonadNftMarket.Models.DTO;
 using MonadNftMarket.Providers;
 using MonadNftMarket.Services.EventParser;
 using MonadNftMarket.Services.Monad;
+using MonadNftMarket.Services.Notifications;
 using Nethereum.Util;
 using Nethereum.Web3;
 
@@ -19,7 +20,6 @@ public class RecordChanges : BackgroundService
     private readonly ILogger<RecordChanges> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IMonadService _monadService;
-
     public RecordChanges(IEventParser eventParser,
         IHyperSyncQuery hyperSyncQuery,
         ILogger<RecordChanges> logger,
@@ -41,6 +41,7 @@ public class RecordChanges : BackgroundService
             {
                 using var scope = _scopeFactory.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<ApiDbContext>();
+                var notifyService = scope.ServiceProvider.GetRequiredService<INotificationService>();
 
                 var nextBlock = await db.Indexer.FirstAsync(i => i.Id == 1, stoppingToken);
 
@@ -218,24 +219,42 @@ public class RecordChanges : BackgroundService
 
                             await db.Trades.AddAsync(trade, cancellationToken: stoppingToken);
                             await db.SaveChangesAsync(stoppingToken);
+                            
+                            var toAddress = trade.To.Address.ToLowerInvariant();
+                            await notifyService.NotifyAsync(toAddress,
+                                NotificationType.TradeCreated,
+                                "Incoming trade",
+                                $"You have received a trade #{trade.TradeId} from {trade.From.Address}");
 
                             break;
                         }
                         case TradeAcceptedEvent e:
                         {
-                            await CloseTradeAsync(e.TradeId, db, stoppingToken);
+                            await CloseTradeAsync(e.TradeId, db, notifyService,
+                                NotificationType.TradeAccepted,
+                                $"Trade #{e.TradeId} accepted",
+                                $"Your trade #{e.TradeId} has been accepted",
+                                stoppingToken);
                             
                             break;
                         }
                         case TradeCompletedEvent e:
                         {
-                            await CloseTradeAsync(e.TradeId, db, stoppingToken);
+                            await CloseTradeAsync(e.TradeId, db, notifyService,
+                                NotificationType.TradeCompleted,
+                                $"Trade #{e.TradeId} completed",
+                                $"Your trade #{e.TradeId} final preparations for trade confirmation",
+                                stoppingToken);;
                             
                             break;
                         }
                         case TradeRejectedEvent e:
                         {
-                            await CloseTradeAsync(e.TradeId, db, stoppingToken);
+                            await CloseTradeAsync(e.TradeId, db, notifyService,
+                                NotificationType.TradeRejected,
+                                $"Trade #{e.TradeId} rejected",
+                                $"Your trade #{e.TradeId} has been rejected by second side",
+                                stoppingToken);
                             
                             break;
                         }
@@ -254,7 +273,14 @@ public class RecordChanges : BackgroundService
             _logger.LogError($"Unexpected exception: {ex}");
         }
     }
-    private static async Task CloseTradeAsync(BigInteger tradeId, ApiDbContext db, CancellationToken stoppingToken)
+    private async Task CloseTradeAsync(
+        BigInteger tradeId,
+        ApiDbContext db,
+        INotificationService notifyService,
+        NotificationType notificationType,
+        string title,
+        string message,
+        CancellationToken stoppingToken)
     {
         var trade = await db.Trades.FirstOrDefaultAsync(t => t.TradeId == tradeId,
             cancellationToken: stoppingToken);
@@ -263,6 +289,8 @@ public class RecordChanges : BackgroundService
 
         trade.IsActive = false;
         await db.SaveChangesAsync(stoppingToken);
+        
+        var toAddress = trade.To.Address!.ToLowerInvariant();
+        await notifyService.NotifyAsync(toAddress, notificationType, title, message);
     }
-
 }

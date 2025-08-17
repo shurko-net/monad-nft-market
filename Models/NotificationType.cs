@@ -3,6 +3,7 @@
 public enum NotificationType
 {
     TradeCreated,
-    TradeCompleted,
-    TradeRejected
+    TradeAccepted,
+    TradeRejected,
+    TradeCompleted
 }

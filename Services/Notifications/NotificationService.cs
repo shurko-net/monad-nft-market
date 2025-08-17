@@ -21,9 +21,13 @@ public class NotificationService : INotificationService
         _hub = hub;
         _logger = logger;
     }
+
+    private static string Normalize(string address) => address.Trim().ToLowerInvariant();
     
     public async Task NotifyAsync(string userAddress, NotificationType type, string title, string body)
     {
+        userAddress = Normalize(userAddress);
+        
         var n = new Notification
         {
             UserAddress = userAddress,
@@ -32,14 +36,21 @@ public class NotificationService : INotificationService
             Body = body,
             IsRead = false
         };
-        
+
         _db.Notifications.Add(n);
         await _db.SaveChangesAsync();
-        
-        await _hub.Clients.Users(userAddress).SendAsync(HubMethods.NotificationReceived, new
+
+        try
         {
-            id = n.Id, title = n.Title, body = n.Body, created = n.CreatedAt, type = n.Type, isRead = n.IsRead
-        });
+            await _hub.Clients.Users(userAddress).SendAsync(HubMethods.NotificationReceived, new
+            {
+                id = n.Id, title = n.Title, body = n.Body, created = n.CreatedAt, type = n.Type, isRead = n.IsRead
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to push SignalR notification to {User}", userAddress);
+        }
     }
 
     public async Task MarkAsReadAsync(string userAddress, Guid notificationId)
