@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using MonadNftMarket.Configuration;
 using MonadNftMarket.Models.ContractFunctions;
 using MonadNftMarket.Models.ContractOutput;
-using Nethereum.ABI.FunctionEncoding;
 using Nethereum.Web3;
 
 namespace MonadNftMarket.Services.Monad;
@@ -45,14 +44,5 @@ public class MonadService : IMonadService
         }
 
         return trade;
-    }
-
-    private T DecodeRawHexToDto<T>(string rawHex) where T : new()
-    {
-        var decoder = new FunctionCallDecoder();
-        
-        T dto = decoder.DecodeFunctionOutput<T>(rawHex);
-        
-        return dto;
     }
 }
