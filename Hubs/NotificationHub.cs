@@ -13,19 +13,23 @@ public class NotificationHub : Hub
     private readonly ApiDbContext _db;
     private readonly ILogger<NotificationHub> _logger;
     private readonly INotificationService _notificationService;
+    private readonly IUserIdentity _userIdentity;
     public NotificationHub(
         ApiDbContext db,
         ILogger<NotificationHub> logger,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IUserIdentity userIdentity)
     {
         _db = db;
         _logger = logger;
         _notificationService = notificationService;
+        _userIdentity = userIdentity;
     }
     
     public override async Task OnConnectedAsync()
     {
-        var userId = Context.UserIdentifier;
+        var userId = _userIdentity.GetAddressByHub(Context.User);
+        
         if (string.IsNullOrEmpty(userId))
         {
             _logger.LogWarning("Anonymous connection attempted to NotificationHub. ConnectionId={ConnectionId}", Context.ConnectionId);
@@ -33,7 +37,7 @@ public class NotificationHub : Hub
             return;
         }
         
-        userId = userId.ToLowerInvariant();
+        _logger.LogWarning("Successfully connected to NotificationHub");
         
         await Clients.Caller.SendAsync(HubMethods.UnreadCountUpdated,
             await _notificationService.GetUnreadCountAsync(userId));
@@ -52,11 +56,10 @@ public class NotificationHub : Hub
         
         await base.OnConnectedAsync();
     }
-
     public async Task MarkAsRead(Guid notificationId)
     {
-        var userId = Context.UserIdentifier;
-        if (userId == null) return;
+        var userId = _userIdentity.GetAddressByHub(Context.User);
+        if (string.IsNullOrEmpty(userId)) return;
         
         await _notificationService.MarkAsReadAsync(userId, notificationId);
         

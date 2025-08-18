@@ -29,23 +29,20 @@ public class UserIdentity(IOptions<EnvVariables> env) : IUserIdentity
         }
     }
 
-    public string? GetUserId(HubConnectionContext connection)
+    public string GetAddressByHub(ClaimsPrincipal? claims)
     {
-        var user = connection.User;
+        if (claims == null)
+            return string.Empty;
         
-        var sub = user.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        var sub = claims.Claims
+            .FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub)?.Value.ToLowerInvariant();
 
-        if (!string.IsNullOrEmpty(sub)) return NormalizeAddress(sub);
+        if (!string.IsNullOrEmpty(sub))
+            return sub;
         
-        var address = user.FindFirst("address")?.Value;
-        if (!string.IsNullOrEmpty(address)) return NormalizeAddress(address);
+        var address = claims.Claims
+            .FirstOrDefault(c => c.Type == "address")?.Value.ToLowerInvariant();
         
-        var nameId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!string.IsNullOrEmpty(nameId)) return NormalizeAddress(nameId);
-        
-        return null;
+        return !string.IsNullOrEmpty(address) ? address : string.Empty;
     }
-    
-    private static string NormalizeAddress(string addr) =>
-        addr.Trim().ToLowerInvariant();
 }
