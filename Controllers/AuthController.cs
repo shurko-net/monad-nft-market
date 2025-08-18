@@ -73,8 +73,8 @@ public class AuthController(
 
         var claims = new List<Claim>
             {
-                new(JwtRegisteredClaimNames.Sub, address),
-                new("address", address),
+                new(JwtRegisteredClaimNames.Sub, address.ToLowerInvariant()),
+                new("address", address.ToLowerInvariant()),
                 new(JwtRegisteredClaimNames.Iat, unixIat, ClaimValueTypes.Integer64)
             };
 

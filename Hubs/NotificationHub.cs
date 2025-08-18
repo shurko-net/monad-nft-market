@@ -13,18 +13,14 @@ public class NotificationHub : Hub
     private readonly ApiDbContext _db;
     private readonly ILogger<NotificationHub> _logger;
     private readonly INotificationService _notificationService;
-    private readonly IUserIdentity _identity;
-    
     public NotificationHub(
         ApiDbContext db,
         ILogger<NotificationHub> logger,
-        INotificationService notificationService,
-        IUserIdentity identity)
+        INotificationService notificationService)
     {
         _db = db;
         _logger = logger;
         _notificationService = notificationService;
-        _identity = identity;
     }
     
     public override async Task OnConnectedAsync()

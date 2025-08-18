@@ -2,8 +2,14 @@
 
 public class Notification
 {
+    private string? _userAddress;
     public Guid Id { get; set; } = Guid.CreateVersion7();
-    public string UserAddress { get; set; } = string.Empty;
+
+    public string? UserAddress
+    {
+        get => _userAddress;
+        set => _userAddress = value?.Trim().ToLowerInvariant();
+    }
     public NotificationType Type { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Body { get; set; } = string.Empty;

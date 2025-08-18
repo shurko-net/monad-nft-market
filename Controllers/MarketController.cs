@@ -87,9 +87,11 @@ public class MarketController(
         page = Math.Max(1, page);
         pageSize = Math.Max(1, pageSize);
         
+        var address = userIdentity.GetAddressByCookie(HttpContext);
+        
         var trades = await db.Trades
             .AsNoTracking()
-            .Where(t => t.IsActive)
+            .Where(t => t.IsActive && (t.From.Address == address || t.To.Address == address))
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Include(t => t.From)

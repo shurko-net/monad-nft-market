@@ -20,7 +20,7 @@ public class UserIdentity(IOptions<EnvVariables> env) : IUserIdentity
         {
             var jwt = new JwtSecurityTokenHandler().ReadJwtToken(address);
 
-            return jwt.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub)?.Value
+            return jwt.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub)?.Value.ToLowerInvariant()
                    ?? string.Empty;
         }
         catch

@@ -115,7 +115,6 @@ namespace MonadNftMarket.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("UserAddress")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
