@@ -88,15 +88,18 @@ public class MarketController(
         pageSize = Math.Max(1, pageSize);
         
         var address = userIdentity.GetAddressByCookie(HttpContext);
-        
-        var trades = await db.Trades
+
+        var query = db.Trades
             .AsNoTracking()
             .Where(t => t.IsActive && (t.From.Address == address || t.To.Address == address))
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
             .Include(t => t.From)
             .Include(t => t.To)
             .AsSplitQuery()
+            .OrderByDescending(t => t.EventMetadata.Timestamp);
+        
+        var trades = await query
+            .Skip((page -1)* pageSize)
+            .Take(pageSize)
             .ToListAsync();
         
         if(trades.Count == 0)
@@ -129,6 +132,7 @@ public class MarketController(
                     Description = m.Description,
                     LastPrice = m.LastPrice
                 }),
+                IsIncoming = metadata.ToAddress == address
             });
         }
 

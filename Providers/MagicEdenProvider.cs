@@ -138,7 +138,7 @@ public class MagicEdenProvider : IMagicEdenProvider
         if (tokens == null || tokens.Count == 0)
             return result;
         
-        return tokens .Select(x =>
+        return tokens.Where(x => x.Token.Kind == "erc721").Select(x =>
         {
             var t = x.Token;
             
@@ -222,7 +222,7 @@ public class MagicEdenProvider : IMagicEdenProvider
         
         return result;
     }
-
+    
     public async Task<List<UserToken>> GetListingMetadataAsync(List<string> contracts, List<BigInteger> ids)
     {
         var url = BuildTokensMetadataUrl(contracts, ids);

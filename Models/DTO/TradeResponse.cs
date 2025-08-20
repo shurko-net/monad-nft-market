@@ -9,4 +9,5 @@ public class TradeResponse
     public required string ToAddress { get; set; }
     public required IEnumerable<Metadata> FromMetadata { get; set; }
     public required IEnumerable<Metadata> ToMetadata { get; set; }
+    public required bool IsIncoming { get; set; }
 }
