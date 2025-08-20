@@ -84,7 +84,7 @@ public class AuthController(
 
         var token = new JwtSecurityToken(
             claims: claims,
-            expires: DateTime.UtcNow.AddDays(1),
+            expires: DateTime.UtcNow.AddDays(30),
             signingCredentials: credentials
         );
 
