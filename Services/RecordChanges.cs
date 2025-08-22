@@ -73,16 +73,12 @@ public class RecordChanges : BackgroundService
                         var evt = _eventParser.ParseEvent(log);
 
                         if (evt is null) continue;
-                        
-                        decimal priceEth = 0;
-                        switch (evt)
-                        {
-                            case ListingCreatedEvent or ListingRemovedEvent or ListingSoldEvent:
-                                dynamic lst = evt;
 
-                                priceEth = (decimal)Web3.Convert.FromWei(lst.Price);
-                                break;
-                        }
+                        decimal priceEth = evt switch
+                        {
+                            ListingCreatedEvent e => Web3.Convert.FromWei(e.Price),
+                            _ => 0m
+                        };
 
                         parsedEvents.Add(new ParsedEvent
                         {
