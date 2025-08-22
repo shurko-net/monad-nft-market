@@ -65,5 +65,24 @@ public class NotificationService : INotificationService
 
     public async Task<int> GetUnreadCountAsync(string userAddress) 
         => await _db.Notifications.CountAsync(n => n.UserAddress == userAddress && !n.IsRead);
-    
+
+    public async Task<List<Notification>> GetUnreadNotifications()
+    {
+        var unreaded = await _db.Notifications
+            .Where(n => !n.IsRead)
+            .OrderByDescending(n => n.CreatedAt)
+            .Select(n => new Notification
+            {
+                Id = n.Id,
+                UserAddress = n.UserAddress,
+                Type = n.Type,
+                Title = n.Title,
+                Body = n.Body,
+                IsRead = n.IsRead,
+                CreatedAt = n.CreatedAt
+            })
+            .ToListAsync();
+
+        return unreaded;
+    }
 }

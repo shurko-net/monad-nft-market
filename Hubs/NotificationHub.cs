@@ -41,18 +41,10 @@ public class NotificationHub : Hub
         
         await Clients.Caller.SendAsync(HubMethods.UnreadCountUpdated,
             await _notificationService.GetUnreadCountAsync(userId));
-        
-        var recent = await _db.Notifications
-            .Where(n => n.UserAddress == userId)
-            .OrderByDescending(n => n.CreatedAt)
-            .Take(50)
-            .Select(n => new
-            {
-                n.Id, n.Title, n.Body, n.Type, n.IsRead, n.CreatedAt
-            })
-            .ToListAsync();
 
-        await Clients.Caller.SendAsync(HubMethods.InitNotifications, recent);
+        var unreaded = await _notificationService.GetUnreadNotifications();
+
+        await Clients.Caller.SendAsync(HubMethods.InitNotifications, unreaded);
         
         await base.OnConnectedAsync();
     }
@@ -62,6 +54,10 @@ public class NotificationHub : Hub
         if (string.IsNullOrEmpty(userId)) return;
         
         await _notificationService.MarkAsReadAsync(userId, notificationId);
+
+        var unreaded = await _notificationService.GetUnreadNotifications();
+
+        await Clients.Caller.SendAsync(HubMethods.InitNotifications, unreaded);
         
         await Clients.Caller.SendAsync(HubMethods.NotificationMarkedAsRead, notificationId);
         await Clients.Caller.SendAsync(HubMethods.UnreadCountUpdated,
