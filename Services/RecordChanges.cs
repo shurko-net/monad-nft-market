@@ -161,7 +161,7 @@ public class RecordChanges : BackgroundService
 
                             if (lst is not null)
                             {
-                                db.Remove(lst);
+                                lst.IsActive = false;
                                 await db.SaveChangesAsync(stoppingToken);
                             }
 
