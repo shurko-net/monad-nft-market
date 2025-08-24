@@ -37,13 +37,13 @@ namespace MonadNftMarket.Migrations
                     EventMetadata_Timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     EventMetadata_TransactionHash = table.Column<string>(type: "text", nullable: true),
                     ListingId = table.Column<string>(type: "text", nullable: false),
-                    NftContractAddress = table.Column<string>(type: "text", nullable: true),
+                    NftContractAddress = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     TokenId = table.Column<string>(type: "text", nullable: false),
-                    SellerAddress = table.Column<string>(type: "text", nullable: true),
+                    SellerAddress = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Price = table.Column<decimal>(type: "numeric", nullable: false),
                     IsSold = table.Column<bool>(type: "boolean", nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
-                    BuyerAddress = table.Column<string>(type: "text", nullable: true)
+                    BuyerAddress = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true)
                 },
                 constraints: table =>
                 {

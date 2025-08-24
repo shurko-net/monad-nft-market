@@ -140,10 +140,16 @@ public class RecordChanges : BackgroundService
                                 await db.Listings.AddAsync(lst, cancellationToken: stoppingToken);
                                 await db.SaveChangesAsync(stoppingToken);
 
+                                await notifyService
+                                    .NotifyAsync(lst.SellerAddress,
+                                        NotificationType.ListingCreated,
+                                        "Listing created",
+                                        $"You created listing #{lst.ListingId}. Price: {lst.Price} ETH");
+
                                 _logger.LogInformation($"New listing: {e.Id}");
                             }
-                            catch (DbUpdateException ex) when ((ex.InnerException is Npgsql.PostgresException pg
-                                                                && pg.SqlState == "23505"))
+                            catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException pg
+                                                                && pg.SqlState == "23505")
                             {
                                 _logger.LogWarning("Listing already exists, skipping insert(unique constraint)");
                             }
@@ -159,6 +165,12 @@ public class RecordChanges : BackgroundService
                             {
                                 lst.IsActive = false;
                                 await db.SaveChangesAsync(stoppingToken);
+                                
+                                await notifyService
+                                    .NotifyAsync(lst.SellerAddress,
+                                        NotificationType.ListingRemoved,
+                                        "Listing removed",
+                                        $"Your listing #{lst.ListingId} has been removed. Price: {lst.Price} ETH");
                             }
 
                             break;
@@ -175,6 +187,12 @@ public class RecordChanges : BackgroundService
                                 lst.IsActive = false;
 
                                 await db.SaveChangesAsync(stoppingToken);
+                                
+                                await notifyService
+                                    .NotifyAsync(lst.SellerAddress,
+                                        NotificationType.ListingSold,
+                                        "Listing sold",
+                                        $"Your listing #{lst.ListingId} was bought by {lst.BuyerAddress} for {lst.Price} ETH");
                             }
 
                             break;
@@ -220,7 +238,7 @@ public class RecordChanges : BackgroundService
                             await notifyService.NotifyAsync(toAddress,
                                 NotificationType.TradeCreated,
                                 "Incoming trade",
-                                $"You have received a trade #{trade.TradeId} from {trade.From.Address}");
+                                $"You received trade #{trade.TradeId} from {trade.From.Address}");
 
                             break;
                         }
@@ -228,7 +246,7 @@ public class RecordChanges : BackgroundService
                         {
                             await CloseTradeAsync(e.TradeId, db, notifyService,
                                 NotificationType.TradeAccepted,
-                                $"Trade #{e.TradeId} accepted",
+                                $"Trade accepted",
                                 $"Your trade #{e.TradeId} has been accepted",
                                 stoppingToken);
                             
@@ -238,9 +256,9 @@ public class RecordChanges : BackgroundService
                         {
                             await CloseTradeAsync(e.TradeId, db, notifyService,
                                 NotificationType.TradeCompleted,
-                                $"Trade #{e.TradeId} completed",
+                                $"Trade completed",
                                 $"Your trade #{e.TradeId} final preparations for trade confirmation",
-                                stoppingToken);;
+                                stoppingToken);
                             
                             break;
                         }
@@ -248,7 +266,7 @@ public class RecordChanges : BackgroundService
                         {
                             await CloseTradeAsync(e.TradeId, db, notifyService,
                                 NotificationType.TradeRejected,
-                                $"Trade #{e.TradeId} rejected",
+                                $"Trade rejected",
                                 $"Your trade #{e.TradeId} has been rejected by second side",
                                 stoppingToken);
                             
@@ -269,7 +287,7 @@ public class RecordChanges : BackgroundService
             _logger.LogError($"Unexpected exception: {ex}");
         }
     }
-    private async Task CloseTradeAsync(
+    private static async Task CloseTradeAsync(
         BigInteger tradeId,
         ApiDbContext db,
         INotificationService notifyService,

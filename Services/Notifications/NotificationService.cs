@@ -66,10 +66,10 @@ public class NotificationService : INotificationService
     public async Task<int> GetUnreadCountAsync(string userAddress) 
         => await _db.Notifications.CountAsync(n => n.UserAddress == userAddress && !n.IsRead);
 
-    public async Task<List<Notification>> GetUnreadNotifications()
+    public async Task<List<Notification>> GetUnreadNotifications(string userAddress)
     {
-        var unreaded = await _db.Notifications
-            .Where(n => !n.IsRead)
+        var notifications = await _db.Notifications
+            .Where(n => !n.IsRead && n.UserAddress == userAddress)
             .OrderByDescending(n => n.CreatedAt)
             .Select(n => new Notification
             {
@@ -83,6 +83,6 @@ public class NotificationService : INotificationService
             })
             .ToListAsync();
 
-        return unreaded;
+        return notifications;
     }
 }

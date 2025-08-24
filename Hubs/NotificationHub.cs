@@ -10,7 +10,6 @@ namespace MonadNftMarket.Hubs;
 [Authorize]
 public class NotificationHub : Hub
 {
-    private readonly ApiDbContext _db;
     private readonly ILogger<NotificationHub> _logger;
     private readonly INotificationService _notificationService;
     private readonly IUserIdentity _userIdentity;
@@ -20,7 +19,6 @@ public class NotificationHub : Hub
         INotificationService notificationService,
         IUserIdentity userIdentity)
     {
-        _db = db;
         _logger = logger;
         _notificationService = notificationService;
         _userIdentity = userIdentity;
@@ -42,7 +40,7 @@ public class NotificationHub : Hub
         await Clients.Caller.SendAsync(HubMethods.UnreadCountUpdated,
             await _notificationService.GetUnreadCountAsync(userId));
 
-        var unreaded = await _notificationService.GetUnreadNotifications();
+        var unreaded = await _notificationService.GetUnreadNotifications(userId);
 
         await Clients.Caller.SendAsync(HubMethods.InitNotifications, unreaded);
         
@@ -55,7 +53,7 @@ public class NotificationHub : Hub
         
         await _notificationService.MarkAsReadAsync(userId, notificationId);
 
-        var unreaded = await _notificationService.GetUnreadNotifications();
+        var unreaded = await _notificationService.GetUnreadNotifications(userId);
 
         await Clients.Caller.SendAsync(HubMethods.InitNotifications, unreaded);
         

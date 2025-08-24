@@ -1,32 +1,38 @@
-﻿using System.Numerics;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Numerics;
 
 namespace MonadNftMarket.Models;
 
 public class Listing
 {
-    private string? _nftContractAddress;
-    private string? _sellerAddress;
-    private string? _buyerAddress;
-    public Guid Id { get; set; } = Guid.CreateVersion7();
-    public EventMetadata EventMetadata { get; set; } = new();
-    public BigInteger ListingId { get; set; }
-    public string? NftContractAddress
+    public Guid Id { get; init; } = Guid.CreateVersion7();
+    public EventMetadata EventMetadata { get; init; } = new();
+    public BigInteger ListingId { get; init; }
+    [Required, MaxLength(50)]
+    public string NftContractAddress
     {
         get => _nftContractAddress;
-        set => _nftContractAddress = value?.Trim().ToLowerInvariant();
+        init => _nftContractAddress = string.IsNullOrEmpty(value) ? string.Empty : NormalizeAddress(value);
     }
-    public BigInteger TokenId { get; set; }
-    public string? SellerAddress
+    public BigInteger TokenId { get; init; }
+    [Required, MaxLength(50)]
+    public string SellerAddress
     {
         get => _sellerAddress;
-        set => _sellerAddress = value?.Trim().ToLowerInvariant();
+        init => _sellerAddress = string.IsNullOrEmpty(value) ? string.Empty : NormalizeAddress(value);
     }
-    public decimal Price { get; set; }
+    public decimal Price { get; init; }
     public bool IsSold { get; set; }
     public bool IsActive { get; set; }
+    [MaxLength(50)]
     public string? BuyerAddress
     {
         get => _buyerAddress;
-        set => _buyerAddress = value?.Trim().ToLowerInvariant();
+        set => _buyerAddress = string.IsNullOrEmpty(value) ? string.Empty : NormalizeAddress(value);
     }
+    private readonly string _nftContractAddress = string.Empty;
+    private readonly string _sellerAddress = string.Empty;
+    private string _buyerAddress = string.Empty;
+    private static string NormalizeAddress(string? addr) =>
+        string.IsNullOrWhiteSpace(addr) ? string.Empty : addr.Trim().ToLowerInvariant();
 }

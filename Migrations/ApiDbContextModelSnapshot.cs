@@ -58,7 +58,8 @@ namespace MonadNftMarket.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("BuyerAddress")
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -71,13 +72,17 @@ namespace MonadNftMarket.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("NftContractAddress")
-                        .HasColumnType("text");
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<decimal>("Price")
                         .HasColumnType("numeric");
 
                     b.Property<string>("SellerAddress")
-                        .HasColumnType("text");
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("TokenId")
                         .IsRequired()

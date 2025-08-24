@@ -12,7 +12,6 @@ public class ApiDbContext(DbContextOptions<ApiDbContext> options) : DbContext(op
     public DbSet<Trade> Trades { get; set; }
     public DbSet<IndexerState> Indexer { get; set; }
     public DbSet<Notification> Notifications { get; set; }
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         var bigIntListConverter = new ValueConverter<List<BigInteger>, string>(

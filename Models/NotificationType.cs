@@ -5,5 +5,8 @@ public enum NotificationType
     TradeCreated,
     TradeAccepted,
     TradeRejected,
-    TradeCompleted
+    TradeCompleted,
+    ListingCreated,
+    ListingRemoved,
+    ListingSold
 }
