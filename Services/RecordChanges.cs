@@ -303,6 +303,17 @@ public class RecordChanges : BackgroundService
 
         trade.IsActive = false;
         await db.SaveChangesAsync(stoppingToken);
+
+        if (notificationType == NotificationType.TradeCreated)
+        {
+            if (!string.IsNullOrEmpty(trade.From.Address))
+            {
+                var fromAddress =  trade.From.Address.ToLowerInvariant();
+                await notifyService.NotifyAsync(fromAddress, notificationType,
+                    "Outcoming trade",
+                    $"You sent trade #{trade.Id} to {trade.To.Address}");
+            }
+        }
         
         var toAddress = trade.To.Address!.ToLowerInvariant();
         await notifyService.NotifyAsync(toAddress, notificationType, title, message);
