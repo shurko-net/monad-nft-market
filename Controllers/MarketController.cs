@@ -81,26 +81,42 @@ public class MarketController(
         return Ok(response);
     }
 
+    [Authorize]
     [HttpGet("trades")]
-    public async Task<IActionResult> GetTrades(int page, int pageSize = 10)
+    public async Task<IActionResult> GetTrades(
+        [FromQuery] string direction = "all",
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
     {
+        if (!Enum.TryParse<TradeDirection>(direction, true, out var dir))
+            return Ok(Array.Empty<TradeResponse>());
+        
         page = Math.Max(1, page);
         pageSize = Math.Max(1, pageSize);
         
         var address = userIdentity.GetAddressByCookie(HttpContext);
 
-        var query = db.Trades
+        var baseQuery = db.Trades
             .AsNoTracking()
-            .Where(t => t.IsActive && (t.From.Address == address || t.To.Address == address))
+            .Where(t => t.IsActive)
             .Include(t => t.From)
             .Include(t => t.To)
             .AsSplitQuery()
-            .OrderByDescending(t => t.EventMetadata.Timestamp);
-        
-        var trades = await query
+            .OrderByDescending(t => t.EventMetadata.Timestamp)
+            .AsQueryable();
+
+        baseQuery = dir switch
+        {
+            TradeDirection.All => baseQuery.Where(t => t.From.Address == address || t.To.Address == address),
+            TradeDirection.Incoming => baseQuery.Where(t => t.To.Address == address),
+            TradeDirection.Outgoing => baseQuery.Where(t => t.From.Address == address),
+            _ => baseQuery
+        };
+
+        var trades = await baseQuery
             .Skip((page -1)* pageSize)
             .Take(pageSize)
-            .ToListAsync();
+            .ToListAsync(); 
         
         if(trades.Count == 0)
             return Ok(Array.Empty<TradeResponse>());
