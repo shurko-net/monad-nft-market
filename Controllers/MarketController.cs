@@ -41,52 +41,12 @@ public class MarketController(
         });
     }
 
-    [HttpGet("market-listing")]
-    public async Task<IActionResult> GetMarketListing(int page, int pageSize = 10)
-    {
-        page = Math.Max(1, page);
-        pageSize = Math.Max(1, pageSize);
-        
-        var listings = await db.Listings
-            .AsNoTracking()
-            .Where(l => l.IsActive)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
-        
-        if(listings.Count == 0)
-            return Ok(Array.Empty<ListingResponse>());
-        
-        var metadata = await magicEdenProvider
-            .GetListingMetadataAsync(listings.Select(l => l.NftContractAddress ?? string.Empty).ToList(),
-                listings.Select(l => l.TokenId).ToList());
-
-        var response = listings.Zip(metadata, (l, m) => new ListingResponse
-        {
-            ListingId = l.ListingId,
-            ContractAddress = l.NftContractAddress,
-            TokenId = l.TokenId,
-            SellerAddress = l.SellerAddress,
-            Price = l.Price,
-            Metadata = new Metadata
-            {
-                Kind = m.Kind,
-                Name = m.Name,
-                ImageOriginal = m.ImageOriginal,
-                Description = m.Description,
-                LastPrice = m.LastPrice
-            }
-        }).ToList();
-        
-        return Ok(response);
-    }
-
     [Authorize]
     [HttpGet("trades")]
     public async Task<IActionResult> GetTrades(
-        [FromQuery] string direction = "all",
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 10)
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string direction = "all")
     {
         if (!Enum.TryParse<TradeDirection>(direction, true, out var dir))
             return Ok(Array.Empty<TradeResponse>());
