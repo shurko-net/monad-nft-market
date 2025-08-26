@@ -63,6 +63,12 @@ public class NotificationService : INotificationService
         await _db.SaveChangesAsync();
     }
 
+    public async Task MarkAllAsReadAsync(string userAddress)
+        => await _db.Notifications
+            .Where(n => n.UserAddress == userAddress && !n.IsRead)
+            .ExecuteUpdateAsync(s => 
+                s.SetProperty(n => n.IsRead, true));
+
     public async Task<int> GetUnreadCountAsync(string userAddress) 
         => await _db.Notifications.CountAsync(n => n.UserAddress == userAddress && !n.IsRead);
 

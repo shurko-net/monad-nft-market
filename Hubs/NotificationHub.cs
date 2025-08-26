@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
 using MonadNftMarket.Context;
 using MonadNftMarket.Services.Notifications;
 using MonadNftMarket.Services.Token;
@@ -13,9 +12,7 @@ public class NotificationHub : Hub
     private readonly ILogger<NotificationHub> _logger;
     private readonly INotificationService _notificationService;
     private readonly IUserIdentity _userIdentity;
-    public NotificationHub(
-        ApiDbContext db,
-        ILogger<NotificationHub> logger,
+    public NotificationHub(ILogger<NotificationHub> logger,
         INotificationService notificationService,
         IUserIdentity userIdentity)
     {
@@ -58,6 +55,20 @@ public class NotificationHub : Hub
         await Clients.Caller.SendAsync(HubMethods.InitNotifications, unreaded);
         
         await Clients.Caller.SendAsync(HubMethods.NotificationMarkedAsRead, notificationId);
+        await Clients.Caller.SendAsync(HubMethods.UnreadCountUpdated,
+            await _notificationService.GetUnreadCountAsync(userId));
+    }
+
+    public async Task MarkAllAsRead()
+    {
+        var userId = _userIdentity.GetAddressByHub(Context.User);
+        if (string.IsNullOrEmpty(userId)) return;
+        
+        await _notificationService.MarkAllAsReadAsync(userId);
+        
+        var unreaded = await _notificationService.GetUnreadNotifications(userId);
+        await Clients.Caller.SendAsync(HubMethods.InitNotifications, unreaded);
+        
         await Clients.Caller.SendAsync(HubMethods.UnreadCountUpdated,
             await _notificationService.GetUnreadCountAsync(userId));
     }
