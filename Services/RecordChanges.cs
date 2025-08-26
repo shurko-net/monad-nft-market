@@ -1,6 +1,8 @@
 ﻿using System.Numerics;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using MonadNftMarket.Context;
+using MonadNftMarket.Hubs;
 using MonadNftMarket.Models;
 using MonadNftMarket.Models.ContractEvents;
 using MonadNftMarket.Models.DTO;
@@ -20,17 +22,21 @@ public class RecordChanges : BackgroundService
     private readonly ILogger<RecordChanges> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IMonadService _monadService;
+    private readonly IHubContext<NotificationHub> _hubContext;
     public RecordChanges(IEventParser eventParser,
         IHyperSyncQuery hyperSyncQuery,
         ILogger<RecordChanges> logger,
         IServiceScopeFactory scopeFactory,
-        IMonadService monadService)
+        IMonadService monadService,
+        IHubContext<NotificationHub> hubContext)
     {
         _eventParser = eventParser;
         _hyperSyncQuery = hyperSyncQuery;
         _logger = logger;
         _scopeFactory = scopeFactory;
         _monadService = monadService;
+        
+        _hubContext = hubContext;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

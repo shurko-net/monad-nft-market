@@ -177,8 +177,8 @@ public class MagicEdenProvider : IMagicEdenProvider
             result,
             new MemoryCacheEntryOptions
             {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15),
-                SlidingExpiration = TimeSpan.FromMinutes(5),
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1),
+                SlidingExpiration = TimeSpan.FromSeconds(30),
                 Priority = CacheItemPriority.Normal
             });
         
@@ -215,8 +215,8 @@ public class MagicEdenProvider : IMagicEdenProvider
             result,
             new MemoryCacheEntryOptions
             {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15),
-                SlidingExpiration = TimeSpan.FromMinutes(5),
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1),
+                SlidingExpiration = TimeSpan.FromSeconds(30),
                 Priority = CacheItemPriority.Normal
             });
         

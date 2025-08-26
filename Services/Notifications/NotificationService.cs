@@ -28,7 +28,7 @@ public class NotificationService : INotificationService
     {
         userAddress = Normalize(userAddress);
         
-        var n = new Notification
+        var notification = new Notification
         {
             UserAddress = userAddress,
             Type = type,
@@ -37,15 +37,12 @@ public class NotificationService : INotificationService
             IsRead = false
         };
 
-        _db.Notifications.Add(n);
+        _db.Notifications.Add(notification);
         await _db.SaveChangesAsync();
 
         try
         {
-            await _hub.Clients.Users(userAddress).SendAsync(HubMethods.NotificationReceived, new
-            {
-                id = n.Id, title = n.Title, body = n.Body, created = n.CreatedAt, type = n.Type, isRead = n.IsRead
-            });
+            await _hub.Clients.User(userAddress).SendAsync(HubMethods.InitNotifications, new[] { notification });
         }
         catch (Exception ex)
         {
