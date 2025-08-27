@@ -1,18 +1,31 @@
-﻿namespace MonadNftMarket.Models;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace MonadNftMarket.Models;
 
 public class Notification
 {
-    private string? _userAddress;
-    public Guid Id { get; set; } = Guid.CreateVersion7();
+    public Guid Id { get; init; } = Guid.CreateVersion7();
 
-    public string? UserAddress
+    [Required, MaxLength(50)]
+    public string UserAddress
     {
         get => _userAddress;
-        set => _userAddress = value?.Trim().ToLowerInvariant();
+        init => _userAddress = string.IsNullOrEmpty(value) ? string.Empty : NormalizeAddress(value);
     }
-    public NotificationType Type { get; set; }
-    public string Title { get; set; } = string.Empty;
-    public string Body { get; set; } = string.Empty;
-    public bool IsRead { get; set; } = false;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public NotificationType Type { get; init; }
+    [MaxLength(200)] public string Title { get; init; } = string.Empty;
+    [MaxLength(300)] public string Body { get; init; } = string.Empty;
+    public bool IsRead { get; set; }
+    [Required, MaxLength(70)]
+    public string TransactionHash
+    {
+        get => _transactionHash;
+        init => _transactionHash = string.IsNullOrEmpty(value) ? string.Empty : NormalizeAddress(value);
+    }
+    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
+    
+    private readonly string _userAddress = string.Empty;
+    private readonly string _transactionHash = string.Empty;
+    private static string NormalizeAddress(string? addr) =>
+        string.IsNullOrWhiteSpace(addr) ? string.Empty : addr.Trim().ToLowerInvariant();
 }

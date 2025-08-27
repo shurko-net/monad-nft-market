@@ -24,15 +24,15 @@ public class MarketController(
         var address = userIdentity.GetAddressByCookie(HttpContext);
 
         var userTokens = await magicEdenProvider.GetUserTokensAsync(address);
-        
+
         page = Math.Max(1, page);
         pageSize = Math.Max(1, pageSize);
-        
+
         var response = userTokens
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToList();
-            
+
         return Ok(new
         {
             response,
@@ -40,23 +40,35 @@ public class MarketController(
             NftAmount = userTokens.Count
         });
     }
-    
+
     [HttpGet("market-listing")]
-    public async Task<IActionResult> GetMarketListing(int page, int pageSize = 10)
+    public async Task<IActionResult> GetMarketListing(
+        [FromQuery] int page,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] bool excludeSelf = false)
     {
+        var address = userIdentity.GetAddressByCookie(HttpContext);
+        if (string.IsNullOrEmpty(address))
+            excludeSelf = false;
+
         page = Math.Max(1, page);
         pageSize = Math.Max(1, pageSize);
-        
-        var listings = await db.Listings
+
+        var query = db.Listings
             .AsNoTracking()
-            .Where(l => l.IsActive)
+            .Where(l => l.IsActive);
+
+        if (excludeSelf)
+            query = query.Where(l => l.SellerAddress != address);
+
+        var listings = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
-        
-        if(listings.Count == 0)
+
+        if (listings.Count == 0)
             return Ok(Array.Empty<ListingResponse>());
-        
+
         var metadata = await magicEdenProvider
             .GetListingMetadataAsync(listings.Select(l => l.NftContractAddress ?? string.Empty).ToList(),
                 listings.Select(l => l.TokenId).ToList());
@@ -75,9 +87,10 @@ public class MarketController(
                 ImageOriginal = m.ImageOriginal,
                 Description = m.Description,
                 LastPrice = m.LastPrice
-            }
+            },
+            IsOwnedByCurrentUser = !string.IsNullOrEmpty(address) && l.SellerAddress == address
         }).ToList();
-        
+
         return Ok(response);
     }
 
@@ -90,10 +103,10 @@ public class MarketController(
     {
         if (!Enum.TryParse<TradeDirection>(direction, true, out var dir))
             return Ok(Array.Empty<TradeResponse>());
-        
+
         page = Math.Max(1, page);
         pageSize = Math.Max(1, pageSize);
-        
+
         var address = userIdentity.GetAddressByCookie(HttpContext);
 
         var baseQuery = db.Trades
@@ -114,19 +127,19 @@ public class MarketController(
         };
 
         var trades = await baseQuery
-            .Skip((page -1)* pageSize)
+            .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .ToListAsync(); 
-        
-        if(trades.Count == 0)
+            .ToListAsync();
+
+        if (trades.Count == 0)
             return Ok(Array.Empty<TradeResponse>());
-        
+
         var result = new List<TradeResponse>();
-        
+
         foreach (var trade in trades)
         {
             var metadata = await magicEdenProvider.GetTradeMetadataAsync(trade);
-            
+
             result.Add(new TradeResponse
             {
                 TradeId = metadata.TradeId,
@@ -153,5 +166,28 @@ public class MarketController(
         }
 
         return Ok(result);
+    }
+
+    [Authorize]
+    [HttpGet("history")]
+    public async Task<IActionResult> GetHistory(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Max(1, pageSize);
+
+        var address = userIdentity.GetAddressByCookie(HttpContext);
+        
+        var history = await db.Notifications
+            .AsNoTracking()
+            .Where(n => n.UserAddress == address && 
+                        (n.Type == NotificationType.TradeAccepted || n.Type == NotificationType.TradeRejected))
+            .OrderByDescending(n => n.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+        
+        return Ok(history);
     }
 }

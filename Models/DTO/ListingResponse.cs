@@ -9,5 +9,6 @@ public class ListingResponse
     public BigInteger TokenId { get; set; }
     public string? SellerAddress { get; set; }
     public decimal Price { get; set; }
-    public required Metadata Metadata { get; set; } 
+    public required Metadata Metadata { get; set; }
+    public bool IsOwnedByCurrentUser { get; set; }
 }

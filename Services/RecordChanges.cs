@@ -1,8 +1,6 @@
 ﻿using System.Numerics;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using MonadNftMarket.Context;
-using MonadNftMarket.Hubs;
 using MonadNftMarket.Models;
 using MonadNftMarket.Models.ContractEvents;
 using MonadNftMarket.Models.DTO;
@@ -22,21 +20,17 @@ public class RecordChanges : BackgroundService
     private readonly ILogger<RecordChanges> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IMonadService _monadService;
-    private readonly IHubContext<NotificationHub> _hubContext;
     public RecordChanges(IEventParser eventParser,
         IHyperSyncQuery hyperSyncQuery,
         ILogger<RecordChanges> logger,
         IServiceScopeFactory scopeFactory,
-        IMonadService monadService,
-        IHubContext<NotificationHub> hubContext)
+        IMonadService monadService)
     {
         _eventParser = eventParser;
         _hyperSyncQuery = hyperSyncQuery;
         _logger = logger;
         _scopeFactory = scopeFactory;
         _monadService = monadService;
-        
-        _hubContext = hubContext;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -53,7 +47,7 @@ public class RecordChanges : BackgroundService
 
                 var data = await _hyperSyncQuery.GetLogs(nextBlock.LastProcessedBlock);
 
-                if (!data.Data.Any())
+                if (data.Data.Count == 0)
                 {
                     _logger.LogWarning("Got zero records");
                     await Task.Delay(500, stoppingToken);
@@ -150,7 +144,8 @@ public class RecordChanges : BackgroundService
                                     .NotifyAsync(lst.SellerAddress,
                                         NotificationType.ListingCreated,
                                         "Listing created",
-                                        $"You created listing #{lst.ListingId}. Price: {lst.Price} ETH");
+                                        $"You created listing #{lst.ListingId}. Price: {lst.Price} ETH",
+                                        lst.EventMetadata.TransactionHash);
 
                                 _logger.LogInformation($"New listing: {e.Id}");
                             }
@@ -176,7 +171,8 @@ public class RecordChanges : BackgroundService
                                     .NotifyAsync(lst.SellerAddress,
                                         NotificationType.ListingRemoved,
                                         "Listing removed",
-                                        $"Your listing #{lst.ListingId} has been removed. Price: {lst.Price} ETH");
+                                        $"Your listing #{lst.ListingId} has been removed. Price: {lst.Price} ETH",
+                                        lst.EventMetadata.TransactionHash);
                             }
 
                             break;
@@ -198,7 +194,8 @@ public class RecordChanges : BackgroundService
                                     .NotifyAsync(lst.SellerAddress,
                                         NotificationType.ListingSold,
                                         "Listing sold",
-                                        $"Your listing #{lst.ListingId} was bought by {lst.BuyerAddress} for {lst.Price} ETH");
+                                        $"Your listing #{lst.ListingId} was bought by {lst.BuyerAddress} for {lst.Price} ETH",
+                                        lst.EventMetadata.TransactionHash);
                             }
 
                             break;
@@ -244,7 +241,8 @@ public class RecordChanges : BackgroundService
                             await notifyService.NotifyAsync(toAddress,
                                 NotificationType.TradeCreated,
                                 "Incoming trade",
-                                $"You received trade #{trade.TradeId} from {trade.From.Address}");
+                                $"You received trade #{trade.TradeId} from {trade.From.Address}",
+                                trade.EventMetadata.TransactionHash);
 
                             break;
                         }
@@ -254,6 +252,7 @@ public class RecordChanges : BackgroundService
                                 NotificationType.TradeAccepted,
                                 $"Trade accepted",
                                 $"Your trade #{e.TradeId} has been accepted",
+                                pe.TransactionHash,
                                 stoppingToken);
                             
                             break;
@@ -264,6 +263,7 @@ public class RecordChanges : BackgroundService
                                 NotificationType.TradeCompleted,
                                 $"Trade completed",
                                 $"Your trade #{e.TradeId} final preparations for trade confirmation",
+                                pe.TransactionHash,
                                 stoppingToken);
                             
                             break;
@@ -274,6 +274,7 @@ public class RecordChanges : BackgroundService
                                 NotificationType.TradeRejected,
                                 $"Trade rejected",
                                 $"Your trade #{e.TradeId} has been rejected by second side",
+                                pe.TransactionHash,
                                 stoppingToken);
                             
                             break;
@@ -300,6 +301,7 @@ public class RecordChanges : BackgroundService
         NotificationType notificationType,
         string title,
         string message,
+        string txHash,
         CancellationToken stoppingToken)
     {
         var trade = await db.Trades.FirstOrDefaultAsync(t => t.TradeId == tradeId,
@@ -317,11 +319,12 @@ public class RecordChanges : BackgroundService
                 var fromAddress =  trade.From.Address.ToLowerInvariant();
                 await notifyService.NotifyAsync(fromAddress, notificationType,
                     "Outcoming trade",
-                    $"You sent trade #{trade.Id} to {trade.To.Address}");
+                    $"You sent trade #{trade.Id} to {trade.To.Address}",
+                    txHash);
             }
         }
         
-        var toAddress = trade.To.Address!.ToLowerInvariant();
-        await notifyService.NotifyAsync(toAddress, notificationType, title, message);
+        var toAddress = trade.To.Address.ToLowerInvariant();
+        await notifyService.NotifyAsync(toAddress, notificationType, title, message, txHash);
     }
 }

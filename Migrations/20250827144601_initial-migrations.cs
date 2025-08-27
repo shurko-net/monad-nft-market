@@ -33,9 +33,9 @@ namespace MonadNftMarket.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     EventMetadata_BlockNumber = table.Column<string>(type: "text", nullable: false),
-                    EventMetadata_BlockHash = table.Column<string>(type: "text", nullable: true),
+                    EventMetadata_BlockHash = table.Column<string>(type: "character varying(70)", maxLength: 70, nullable: false),
                     EventMetadata_Timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    EventMetadata_TransactionHash = table.Column<string>(type: "text", nullable: true),
+                    EventMetadata_TransactionHash = table.Column<string>(type: "character varying(70)", maxLength: 70, nullable: false),
                     ListingId = table.Column<string>(type: "text", nullable: false),
                     NftContractAddress = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     TokenId = table.Column<string>(type: "text", nullable: false),
@@ -55,11 +55,12 @@ namespace MonadNftMarket.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    UserAddress = table.Column<string>(type: "text", nullable: true),
+                    UserAddress = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Type = table.Column<int>(type: "integer", nullable: false),
-                    Title = table.Column<string>(type: "text", nullable: false),
-                    Body = table.Column<string>(type: "text", nullable: false),
+                    Title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Body = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
                     IsRead = table.Column<bool>(type: "boolean", nullable: false),
+                    TransactionHash = table.Column<string>(type: "character varying(70)", maxLength: 70, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -73,14 +74,14 @@ namespace MonadNftMarket.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     EventMetadata_BlockNumber = table.Column<string>(type: "text", nullable: false),
-                    EventMetadata_BlockHash = table.Column<string>(type: "text", nullable: true),
+                    EventMetadata_BlockHash = table.Column<string>(type: "character varying(70)", maxLength: 70, nullable: false),
                     EventMetadata_Timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    EventMetadata_TransactionHash = table.Column<string>(type: "text", nullable: true),
+                    EventMetadata_TransactionHash = table.Column<string>(type: "character varying(70)", maxLength: 70, nullable: false),
                     TradeId = table.Column<string>(type: "text", nullable: false),
-                    From_Address = table.Column<string>(type: "text", nullable: true),
+                    From_Address = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     From_TokenIds = table.Column<string>(type: "text", nullable: false),
                     From_NftContracts = table.Column<List<string>>(type: "text[]", nullable: false),
-                    To_Address = table.Column<string>(type: "text", nullable: true),
+                    To_Address = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     To_TokenIds = table.Column<string>(type: "text", nullable: false),
                     To_NftContracts = table.Column<List<string>>(type: "text[]", nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false)

@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MonadNftMarket.Migrations
 {
     [DbContext(typeof(ApiDbContext))]
-    [Migration("20250824175907_initial-migrations")]
+    [Migration("20250827144601_initial-migrations")]
     partial class initialmigrations
     {
         /// <inheritdoc />
@@ -107,7 +107,8 @@ namespace MonadNftMarket.Migrations
 
                     b.Property<string>("Body")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -117,13 +118,21 @@ namespace MonadNftMarket.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("TransactionHash")
+                        .IsRequired()
+                        .HasMaxLength(70)
+                        .HasColumnType("character varying(70)");
 
                     b.Property<int>("Type")
                         .HasColumnType("integer");
 
                     b.Property<string>("UserAddress")
-                        .HasColumnType("text");
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.HasKey("Id");
 
@@ -159,7 +168,9 @@ namespace MonadNftMarket.Migrations
                                 .HasColumnType("uuid");
 
                             b1.Property<string>("BlockHash")
-                                .HasColumnType("text");
+                                .IsRequired()
+                                .HasMaxLength(70)
+                                .HasColumnType("character varying(70)");
 
                             b1.Property<string>("BlockNumber")
                                 .IsRequired()
@@ -169,7 +180,9 @@ namespace MonadNftMarket.Migrations
                                 .HasColumnType("timestamp with time zone");
 
                             b1.Property<string>("TransactionHash")
-                                .HasColumnType("text");
+                                .IsRequired()
+                                .HasMaxLength(70)
+                                .HasColumnType("character varying(70)");
 
                             b1.HasKey("ListingId");
 
@@ -191,7 +204,9 @@ namespace MonadNftMarket.Migrations
                                 .HasColumnType("uuid");
 
                             b1.Property<string>("BlockHash")
-                                .HasColumnType("text");
+                                .IsRequired()
+                                .HasMaxLength(70)
+                                .HasColumnType("character varying(70)");
 
                             b1.Property<string>("BlockNumber")
                                 .IsRequired()
@@ -201,7 +216,9 @@ namespace MonadNftMarket.Migrations
                                 .HasColumnType("timestamp with time zone");
 
                             b1.Property<string>("TransactionHash")
-                                .HasColumnType("text");
+                                .IsRequired()
+                                .HasMaxLength(70)
+                                .HasColumnType("character varying(70)");
 
                             b1.HasKey("TradeId");
 
@@ -217,7 +234,9 @@ namespace MonadNftMarket.Migrations
                                 .HasColumnType("uuid");
 
                             b1.Property<string>("Address")
-                                .HasColumnType("text");
+                                .IsRequired()
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)");
 
                             b1.PrimitiveCollection<List<string>>("NftContracts")
                                 .IsRequired()
@@ -241,7 +260,9 @@ namespace MonadNftMarket.Migrations
                                 .HasColumnType("uuid");
 
                             b1.Property<string>("Address")
-                                .HasColumnType("text");
+                                .IsRequired()
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)");
 
                             b1.PrimitiveCollection<List<string>>("NftContracts")
                                 .IsRequired()

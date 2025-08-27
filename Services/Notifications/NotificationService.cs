@@ -24,7 +24,12 @@ public class NotificationService : INotificationService
 
     private static string Normalize(string address) => address.Trim().ToLowerInvariant();
     
-    public async Task NotifyAsync(string userAddress, NotificationType type, string title, string body)
+    public async Task NotifyAsync(
+        string userAddress,
+        NotificationType type,
+        string title,
+        string body,
+        string txHash)
     {
         userAddress = Normalize(userAddress);
         
@@ -34,7 +39,8 @@ public class NotificationService : INotificationService
             Type = type,
             Title = title,
             Body = body,
-            IsRead = false
+            IsRead = false,
+            TransactionHash = txHash
         };
 
         _db.Notifications.Add(notification);
@@ -82,7 +88,8 @@ public class NotificationService : INotificationService
                 Title = n.Title,
                 Body = n.Body,
                 IsRead = n.IsRead,
-                CreatedAt = n.CreatedAt
+                CreatedAt = n.CreatedAt,
+                TransactionHash = n.TransactionHash
             })
             .ToListAsync();
 
