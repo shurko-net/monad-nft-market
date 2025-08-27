@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MonadNftMarket.Migrations
 {
     [DbContext(typeof(ApiDbContext))]
-    [Migration("20250827144601_initial-migrations")]
+    [Migration("20250827234317_initial-migrations")]
     partial class initialmigrations
     {
         /// <inheritdoc />
@@ -30,20 +30,24 @@ namespace MonadNftMarket.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("LastProcessedBlock")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("last_processed_block");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_indexer");
 
-                    b.ToTable("Indexer");
+                    b.ToTable("indexer", (string)null);
 
                     b.HasData(
                         new
@@ -58,106 +62,131 @@ namespace MonadNftMarket.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<string>("BuyerAddress")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("buyer_address");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
 
                     b.Property<bool>("IsSold")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_sold");
 
                     b.Property<string>("ListingId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("listing_id");
 
                     b.Property<string>("NftContractAddress")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("nft_contract_address");
 
                     b.Property<decimal>("Price")
-                        .HasColumnType("numeric");
+                        .HasColumnType("numeric")
+                        .HasColumnName("price");
 
                     b.Property<string>("SellerAddress")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("seller_address");
 
                     b.Property<string>("TokenId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("token_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_listings");
 
                     b.HasIndex("ListingId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_listings_listing_id");
 
-                    b.ToTable("Listings");
+                    b.ToTable("listings", (string)null);
                 });
 
             modelBuilder.Entity("MonadNftMarket.Models.Notification", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<string>("Body")
                         .IsRequired()
                         .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("body");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<bool>("IsRead")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_read");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
 
                     b.Property<string>("TransactionHash")
                         .IsRequired()
                         .HasMaxLength(70)
-                        .HasColumnType("character varying(70)");
+                        .HasColumnType("character varying(70)")
+                        .HasColumnName("transaction_hash");
 
                     b.Property<int>("Type")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("type");
 
                     b.Property<string>("UserAddress")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("user_address");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_notifications");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("notifications", (string)null);
                 });
 
             modelBuilder.Entity("MonadNftMarket.Models.Trade", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
 
                     b.Property<string>("TradeId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("trade_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_trades");
 
                     b.HasIndex("TradeId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_trades_trade_id");
 
-                    b.ToTable("Trades");
+                    b.ToTable("trades", (string)null);
                 });
 
             modelBuilder.Entity("MonadNftMarket.Models.Listing", b =>
@@ -165,31 +194,37 @@ namespace MonadNftMarket.Migrations
                     b.OwnsOne("MonadNftMarket.Models.EventMetadata", "EventMetadata", b1 =>
                         {
                             b1.Property<Guid>("ListingId")
-                                .HasColumnType("uuid");
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
 
                             b1.Property<string>("BlockHash")
                                 .IsRequired()
                                 .HasMaxLength(70)
-                                .HasColumnType("character varying(70)");
+                                .HasColumnType("character varying(70)")
+                                .HasColumnName("event_metadata_block_hash");
 
                             b1.Property<string>("BlockNumber")
                                 .IsRequired()
-                                .HasColumnType("text");
+                                .HasColumnType("text")
+                                .HasColumnName("event_metadata_block_number");
 
                             b1.Property<DateTime>("Timestamp")
-                                .HasColumnType("timestamp with time zone");
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("event_metadata_timestamp");
 
                             b1.Property<string>("TransactionHash")
                                 .IsRequired()
                                 .HasMaxLength(70)
-                                .HasColumnType("character varying(70)");
+                                .HasColumnType("character varying(70)")
+                                .HasColumnName("event_metadata_transaction_hash");
 
                             b1.HasKey("ListingId");
 
-                            b1.ToTable("Listings");
+                            b1.ToTable("listings");
 
                             b1.WithOwner()
-                                .HasForeignKey("ListingId");
+                                .HasForeignKey("ListingId")
+                                .HasConstraintName("fk_listings_listings_id");
                         });
 
                     b.Navigation("EventMetadata")
@@ -201,83 +236,99 @@ namespace MonadNftMarket.Migrations
                     b.OwnsOne("MonadNftMarket.Models.EventMetadata", "EventMetadata", b1 =>
                         {
                             b1.Property<Guid>("TradeId")
-                                .HasColumnType("uuid");
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
 
                             b1.Property<string>("BlockHash")
                                 .IsRequired()
                                 .HasMaxLength(70)
-                                .HasColumnType("character varying(70)");
+                                .HasColumnType("character varying(70)")
+                                .HasColumnName("event_metadata_block_hash");
 
                             b1.Property<string>("BlockNumber")
                                 .IsRequired()
-                                .HasColumnType("text");
+                                .HasColumnType("text")
+                                .HasColumnName("event_metadata_block_number");
 
                             b1.Property<DateTime>("Timestamp")
-                                .HasColumnType("timestamp with time zone");
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("event_metadata_timestamp");
 
                             b1.Property<string>("TransactionHash")
                                 .IsRequired()
                                 .HasMaxLength(70)
-                                .HasColumnType("character varying(70)");
+                                .HasColumnType("character varying(70)")
+                                .HasColumnName("event_metadata_transaction_hash");
 
                             b1.HasKey("TradeId");
 
-                            b1.ToTable("Trades");
+                            b1.ToTable("trades");
 
                             b1.WithOwner()
-                                .HasForeignKey("TradeId");
+                                .HasForeignKey("TradeId")
+                                .HasConstraintName("fk_trades_trades_id");
                         });
 
                     b.OwnsOne("MonadNftMarket.Models.Peer", "From", b1 =>
                         {
                             b1.Property<Guid>("TradeId")
-                                .HasColumnType("uuid");
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
 
                             b1.Property<string>("Address")
                                 .IsRequired()
                                 .HasMaxLength(50)
-                                .HasColumnType("character varying(50)");
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("from_address");
 
                             b1.PrimitiveCollection<List<string>>("NftContracts")
                                 .IsRequired()
-                                .HasColumnType("text[]");
+                                .HasColumnType("text[]")
+                                .HasColumnName("from_nft_contracts");
 
                             b1.Property<string>("TokenIds")
                                 .IsRequired()
-                                .HasColumnType("text");
+                                .HasColumnType("text")
+                                .HasColumnName("from_token_ids");
 
                             b1.HasKey("TradeId");
 
-                            b1.ToTable("Trades");
+                            b1.ToTable("trades");
 
                             b1.WithOwner()
-                                .HasForeignKey("TradeId");
+                                .HasForeignKey("TradeId")
+                                .HasConstraintName("fk_trades_trades_id");
                         });
 
                     b.OwnsOne("MonadNftMarket.Models.Peer", "To", b1 =>
                         {
                             b1.Property<Guid>("TradeId")
-                                .HasColumnType("uuid");
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
 
                             b1.Property<string>("Address")
                                 .IsRequired()
                                 .HasMaxLength(50)
-                                .HasColumnType("character varying(50)");
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("to_address");
 
                             b1.PrimitiveCollection<List<string>>("NftContracts")
                                 .IsRequired()
-                                .HasColumnType("text[]");
+                                .HasColumnType("text[]")
+                                .HasColumnName("to_nft_contracts");
 
                             b1.Property<string>("TokenIds")
                                 .IsRequired()
-                                .HasColumnType("text");
+                                .HasColumnType("text")
+                                .HasColumnName("to_token_ids");
 
                             b1.HasKey("TradeId");
 
-                            b1.ToTable("Trades");
+                            b1.ToTable("trades");
 
                             b1.WithOwner()
-                                .HasForeignKey("TradeId");
+                                .HasForeignKey("TradeId")
+                                .HasConstraintName("fk_trades_trades_id");
                         });
 
                     b.Navigation("EventMetadata")

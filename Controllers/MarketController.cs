@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using MonadNftMarket.Context;
 using MonadNftMarket.Models;
 using MonadNftMarket.Models.DTO;
+using Org.BouncyCastle.Math;
 
 namespace MonadNftMarket.Controllers;
 
@@ -62,6 +63,7 @@ public class MarketController(
             query = query.Where(l => l.SellerAddress != address);
 
         var listings = await query
+            .OrderBy(l => l.ListingId)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -69,26 +71,26 @@ public class MarketController(
         if (listings.Count == 0)
             return Ok(Array.Empty<ListingResponse>());
 
-        var metadata = await magicEdenProvider
-            .GetListingMetadataAsync(listings.Select(l => l.NftContractAddress ?? string.Empty).ToList(),
-                listings.Select(l => l.TokenId).ToList());
+        var contracts = listings.Select(l => l.NftContractAddress).ToList();
+        var tokenIds = listings.Select(l => l.TokenId).ToList();
+        
+        var metadata = await magicEdenProvider.GetListingMetadataAsync(contracts, tokenIds);
 
-        var response = listings.Zip(metadata, (l, m) => new ListingResponse
+        var response = listings.Select(l =>
         {
-            ListingId = l.ListingId,
-            ContractAddress = l.NftContractAddress,
-            TokenId = l.TokenId,
-            SellerAddress = l.SellerAddress,
-            Price = l.Price,
-            Metadata = new Metadata
+            var key = $"{l.NftContractAddress.ToLowerInvariant()}:{l.TokenId}";
+            metadata.TryGetValue(key, out var m);
+
+            return new ListingResponse
             {
-                Kind = m.Kind,
-                Name = m.Name,
-                ImageOriginal = m.ImageOriginal,
-                Description = m.Description,
-                LastPrice = m.LastPrice
-            },
-            IsOwnedByCurrentUser = !string.IsNullOrEmpty(address) && l.SellerAddress == address
+                ListingId = l.ListingId,
+                ContractAddress = l.NftContractAddress,
+                TokenId = l.TokenId,
+                SellerAddress = l.SellerAddress,
+                Price = l.Price,
+                Metadata = m ?? new(),
+                IsOwnedByCurrentUser = !string.IsNullOrEmpty(address) && l.SellerAddress == address
+            };
         }).ToList();
 
         return Ok(response);

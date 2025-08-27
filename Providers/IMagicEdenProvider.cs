@@ -8,5 +8,5 @@ public interface IMagicEdenProvider
 {
     public Task<List<UserToken>> GetUserTokensAsync(string userAddress);
     public Task<TradeMetadata> GetTradeMetadataAsync(Trade trade);
-    public Task<List<UserToken>> GetListingMetadataAsync(List<string> contracts, List<BigInteger> ids);
+    public Task<IReadOnlyDictionary<string, Metadata>> GetListingMetadataAsync(List<string> contracts, List<BigInteger> ids);
 }

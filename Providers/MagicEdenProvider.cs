@@ -131,7 +131,7 @@ public class MagicEdenProvider : IMagicEdenProvider
         return allTokens;
     }
 
-    private List<UserToken> ToUserToken(List<TokensResponse>? tokens)
+    private static List<UserToken> ToUserToken(List<TokensResponse>? tokens)
     {
         var result = new List<UserToken>();
 
@@ -152,7 +152,7 @@ public class MagicEdenProvider : IMagicEdenProvider
                                 ?? t.Image
                                 ?? string.Empty,
                 Description = t.Description ?? string.Empty,
-                LastPrice = t.Collection?.FloorAskPrice?.Amount?.Native ?? 0m
+                LastPrice = t.Collection?.FloorAskPrice.Amount.Native ?? 0m
             };
         }) .ToList();
     }
@@ -204,8 +204,8 @@ public class MagicEdenProvider : IMagicEdenProvider
         var result = new TradeMetadata
         {
             TradeId = trade.TradeId,
-            FromAddress = trade.From.Address ?? string.Empty,
-            ToAddress = trade.To.Address ?? string.Empty,
+            FromAddress = trade.From.Address,
+            ToAddress = trade.To.Address,
             From = from,
             To = to
         };
@@ -223,13 +223,40 @@ public class MagicEdenProvider : IMagicEdenProvider
         return result;
     }
     
-    public async Task<List<UserToken>> GetListingMetadataAsync(List<string> contracts, List<BigInteger> ids)
+    public async Task<IReadOnlyDictionary<string, Metadata>> GetListingMetadataAsync(List<string> contracts, List<BigInteger> ids)
     {
         var url = BuildTokensMetadataUrl(contracts, ids);
         if(string.IsNullOrEmpty(url))
-            return [];
+            return new Dictionary<string, Metadata>(StringComparer.OrdinalIgnoreCase);
+        
         var allTokens = await DeserializeMetadata(url);   
+        var userTokens = ToUserToken(allTokens);
+        
+        var dict = new Dictionary<string, Metadata>(StringComparer.OrdinalIgnoreCase);
 
-        return ToUserToken(allTokens);
+        foreach (var t in userTokens)
+        {
+            if(string.IsNullOrEmpty(t.ContractAddress) || string.IsNullOrEmpty(t.TokenId))
+                continue;
+            
+            var key = GetKey(t.ContractAddress, t.TokenId);
+
+            if (!dict.ContainsKey(key))
+            {
+                dict[key] = new Metadata
+                {
+                    Kind = t.Kind,
+                    Name = t.Name,
+                    ImageOriginal = t.ImageOriginal,
+                    Description = t.Description,
+                    LastPrice = t.LastPrice
+                };
+            }
+        }
+
+        return dict;
     }
+    
+    private static string GetKey(string contract, string tokenId) =>
+        $"{contract.ToLowerInvariant()}:{tokenId}";
 }
