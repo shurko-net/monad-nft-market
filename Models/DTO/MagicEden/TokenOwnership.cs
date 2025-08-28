@@ -1,5 +1,4 @@
 using System.Text.Json.Serialization;
-using MonadNftMarket.Models.MagicEden.DTO;
 
 namespace MonadNftMarket.Models.DTO.MagicEden;
 

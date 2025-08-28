@@ -80,11 +80,13 @@ public class MagicEdenProvider : IMagicEdenProvider
 
             var finalUrl = uriBuilder.Uri.ToString();
             var responseStr = await HttpClient.GetStringAsync(finalUrl);
+            _logger.LogCritical("Dude");
 
             if (string.IsNullOrWhiteSpace(responseStr))
                 break;
 
             var jsonDoc = JsonDocument.Parse(responseStr);
+            _logger.LogCritical($"JsonDoc: {responseStr}");
             result.Add(jsonDoc);
 
             continuation = jsonDoc.RootElement.TryGetProperty("continuation", out var contElem) &&
@@ -125,13 +127,13 @@ public class MagicEdenProvider : IMagicEdenProvider
         }
         catch (Exception ex)
         {
-            _logger.LogInformation($"Error in {nameof(DeserializeMetadata)}: {ex.Message}");
+            _logger.LogError($"Error in {nameof(DeserializeMetadata)}: {ex.Message}");
         }
         
         return allTokens;
     }
 
-    private static List<UserToken> ToUserToken(List<TokensResponse>? tokens)
+    private List<UserToken> ToUserToken(List<TokensResponse>? tokens)
     {
         var result = new List<UserToken>();
 
@@ -141,7 +143,7 @@ public class MagicEdenProvider : IMagicEdenProvider
         return tokens.Where(x => x.Token.Kind == "erc721").Select(x =>
         {
             var t = x.Token;
-            
+
             return new UserToken
             {
                 ContractAddress = t.Contract ?? string.Empty,
@@ -152,11 +154,11 @@ public class MagicEdenProvider : IMagicEdenProvider
                                 ?? t.Image
                                 ?? string.Empty,
                 Description = t.Description ?? string.Empty,
-                LastPrice = t.Collection?.FloorAskPrice.Amount.Native ?? 0m
+                LastPrice = t.Collection?.FloorAskPrice?.Amount?.Native ?? 0m
             };
-        }) .ToList();
+        }).ToList();
     }
-    
+
     public async Task<List<UserToken>> GetUserTokensAsync(string userAddress)
     {
         var cacheKey = $"{nameof(GetUserTokensAsync)}_{userAddress}";
@@ -225,11 +227,14 @@ public class MagicEdenProvider : IMagicEdenProvider
     
     public async Task<IReadOnlyDictionary<string, Metadata>> GetListingMetadataAsync(List<string> contracts, List<BigInteger> ids)
     {
+        if (contracts.Count == 0 || ids.Count == 0)
+            return new Dictionary<string, Metadata>(StringComparer.OrdinalIgnoreCase);
+        
         var url = BuildTokensMetadataUrl(contracts, ids);
         if(string.IsNullOrEmpty(url))
             return new Dictionary<string, Metadata>(StringComparer.OrdinalIgnoreCase);
         
-        var allTokens = await DeserializeMetadata(url);   
+        var allTokens = await DeserializeMetadata(url);
         var userTokens = ToUserToken(allTokens);
         
         var dict = new Dictionary<string, Metadata>(StringComparer.OrdinalIgnoreCase);
