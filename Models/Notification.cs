@@ -12,7 +12,7 @@ public class Notification
         get => _userAddress;
         init => _userAddress = string.IsNullOrEmpty(value) ? string.Empty : NormalizeAddress(value);
     }
-    public NotificationType Type { get; init; }
+    public EventStatus Status { get; init; }
     [MaxLength(200)] public string Title { get; init; } = string.Empty;
     [MaxLength(300)] public string Body { get; init; } = string.Empty;
     public bool IsRead { get; set; }

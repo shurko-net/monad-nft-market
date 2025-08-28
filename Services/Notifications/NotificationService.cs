@@ -26,7 +26,7 @@ public class NotificationService : INotificationService
     
     public async Task NotifyAsync(
         string userAddress,
-        NotificationType type,
+        EventStatus status,
         string title,
         string body,
         string txHash)
@@ -36,7 +36,7 @@ public class NotificationService : INotificationService
         var notification = new Notification
         {
             UserAddress = userAddress,
-            Type = type,
+            Status= status,
             Title = title,
             Body = body,
             IsRead = false,
@@ -48,6 +48,8 @@ public class NotificationService : INotificationService
 
         try
         {
+            await _hub.Clients.User(userAddress)
+                .SendAsync(HubMethods.UnreadCountUpdated, await GetUnreadCountAsync(userAddress));
             await _hub.Clients.User(userAddress).SendAsync(HubMethods.InitNotifications, new[] { notification });
         }
         catch (Exception ex)
@@ -84,7 +86,7 @@ public class NotificationService : INotificationService
             {
                 Id = n.Id,
                 UserAddress = n.UserAddress,
-                Type = n.Type,
+                Status = n.Status,
                 Title = n.Title,
                 Body = n.Body,
                 IsRead = n.IsRead,

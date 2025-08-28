@@ -4,7 +4,7 @@ namespace MonadNftMarket.Services.Notifications;
 
 public interface INotificationService
 {
-    Task NotifyAsync(string userAddress, NotificationType type, string title, string body, string txHash);
+    Task NotifyAsync(string userAddress, EventStatus status, string title, string body, string txHash);
     Task MarkAsReadAsync(string userAddress, Guid notificationId);
     Task MarkAllAsReadAsync(string userAddress);
     Task<List<Notification>> GetUnreadNotifications(string userAddress);

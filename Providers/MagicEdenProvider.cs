@@ -80,13 +80,11 @@ public class MagicEdenProvider : IMagicEdenProvider
 
             var finalUrl = uriBuilder.Uri.ToString();
             var responseStr = await HttpClient.GetStringAsync(finalUrl);
-            _logger.LogCritical("Dude");
 
             if (string.IsNullOrWhiteSpace(responseStr))
                 break;
 
             var jsonDoc = JsonDocument.Parse(responseStr);
-            _logger.LogCritical($"JsonDoc: {responseStr}");
             result.Add(jsonDoc);
 
             continuation = jsonDoc.RootElement.TryGetProperty("continuation", out var contElem) &&

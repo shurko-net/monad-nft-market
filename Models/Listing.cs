@@ -30,6 +30,7 @@ public class Listing
         get => _buyerAddress;
         set => _buyerAddress = string.IsNullOrEmpty(value) ? string.Empty : NormalizeAddress(value);
     }
+    public EventStatus Status { get; set; }
     private readonly string _nftContractAddress = string.Empty;
     private readonly string _sellerAddress = string.Empty;
     private string _buyerAddress = string.Empty;

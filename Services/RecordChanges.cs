@@ -134,7 +134,8 @@ public class RecordChanges : BackgroundService
                                     SellerAddress = e.Seller,
                                     IsSold = false,
                                     IsActive = true,
-                                    BuyerAddress = string.Empty
+                                    BuyerAddress = string.Empty,
+                                    Status = EventStatus.ListingCreated
                                 };
 
                                 await db.Listings.AddAsync(lst, cancellationToken: stoppingToken);
@@ -142,7 +143,7 @@ public class RecordChanges : BackgroundService
 
                                 await notifyService
                                     .NotifyAsync(lst.SellerAddress,
-                                        NotificationType.ListingCreated,
+                                        EventStatus.ListingCreated,
                                         "Listing created",
                                         $"You created listing #{lst.ListingId}. Price: {lst.Price} ETH",
                                         lst.EventMetadata.TransactionHash);
@@ -165,11 +166,12 @@ public class RecordChanges : BackgroundService
                             if (lst is not null)
                             {
                                 lst.IsActive = false;
+                                lst.Status = EventStatus.ListingRemoved;
                                 await db.SaveChangesAsync(stoppingToken);
                                 
                                 await notifyService
                                     .NotifyAsync(lst.SellerAddress,
-                                        NotificationType.ListingRemoved,
+                                        EventStatus.ListingRemoved,
                                         "Listing removed",
                                         $"Your listing #{lst.ListingId} has been removed. Price: {lst.Price} ETH",
                                         lst.EventMetadata.TransactionHash);
@@ -187,12 +189,13 @@ public class RecordChanges : BackgroundService
                                 lst.BuyerAddress = e.Buyer;
                                 lst.IsSold = true;
                                 lst.IsActive = false;
+                                lst.Status = EventStatus.ListingSold;
 
                                 await db.SaveChangesAsync(stoppingToken);
                                 
                                 await notifyService
                                     .NotifyAsync(lst.SellerAddress,
-                                        NotificationType.ListingSold,
+                                        EventStatus.ListingSold,
                                         "Listing sold",
                                         $"Your listing #{lst.ListingId} was bought by {lst.BuyerAddress} for {lst.Price} ETH",
                                         lst.EventMetadata.TransactionHash);
@@ -231,7 +234,8 @@ public class RecordChanges : BackgroundService
                                     TokenIds = tradeData.To.TokenIds,
                                     NftContracts = tradeData.To.NftContracts
                                 },
-                                IsActive = true
+                                IsActive = true,
+                                Status = EventStatus.TradeCreated
                             };
 
                             await db.Trades.AddAsync(trade, cancellationToken: stoppingToken);
@@ -239,7 +243,7 @@ public class RecordChanges : BackgroundService
                             
                             var toAddress = trade.To.Address.ToLowerInvariant();
                             await notifyService.NotifyAsync(toAddress,
-                                NotificationType.TradeCreated,
+                                EventStatus.TradeCreated,
                                 "Incoming trade",
                                 $"You received trade #{trade.TradeId} from {trade.From.Address}",
                                 trade.EventMetadata.TransactionHash);
@@ -249,7 +253,7 @@ public class RecordChanges : BackgroundService
                         case TradeAcceptedEvent e:
                         {
                             await CloseTradeAsync(e.TradeId, db, notifyService,
-                                NotificationType.TradeAccepted,
+                                EventStatus.TradeAccepted,
                                 $"Trade accepted",
                                 $"Your trade #{e.TradeId} has been accepted",
                                 pe.TransactionHash,
@@ -260,7 +264,7 @@ public class RecordChanges : BackgroundService
                         case TradeCompletedEvent e:
                         {
                             await CloseTradeAsync(e.TradeId, db, notifyService,
-                                NotificationType.TradeCompleted,
+                                EventStatus.TradeCompleted,
                                 $"Trade completed",
                                 $"Your trade #{e.TradeId} final preparations for trade confirmation",
                                 pe.TransactionHash,
@@ -271,7 +275,7 @@ public class RecordChanges : BackgroundService
                         case TradeRejectedEvent e:
                         {
                             await CloseTradeAsync(e.TradeId, db, notifyService,
-                                NotificationType.TradeRejected,
+                                EventStatus.TradeRejected,
                                 $"Trade rejected",
                                 $"Your trade #{e.TradeId} has been rejected by second side",
                                 pe.TransactionHash,
@@ -298,7 +302,7 @@ public class RecordChanges : BackgroundService
         BigInteger tradeId,
         ApiDbContext db,
         INotificationService notifyService,
-        NotificationType notificationType,
+        EventStatus status,
         string title,
         string message,
         string txHash,
@@ -310,14 +314,15 @@ public class RecordChanges : BackgroundService
         if (trade is null) return;
 
         trade.IsActive = false;
+        trade.Status = status;
         await db.SaveChangesAsync(stoppingToken);
 
-        if (notificationType == NotificationType.TradeCreated)
+        if (status == EventStatus.TradeCreated)
         {
             if (!string.IsNullOrEmpty(trade.From.Address))
             {
                 var fromAddress =  trade.From.Address.ToLowerInvariant();
-                await notifyService.NotifyAsync(fromAddress, notificationType,
+                await notifyService.NotifyAsync(fromAddress, status,
                     "Outcoming trade",
                     $"You sent trade #{trade.Id} to {trade.To.Address}",
                     txHash);
@@ -325,6 +330,6 @@ public class RecordChanges : BackgroundService
         }
         
         var toAddress = trade.To.Address.ToLowerInvariant();
-        await notifyService.NotifyAsync(toAddress, notificationType, title, message, txHash);
+        await notifyService.NotifyAsync(toAddress, status, title, message, txHash);
     }
 }

@@ -9,6 +9,6 @@ public class Trade
     public BigInteger TradeId { get; init; }
     public Peer From { get; init; } = new();
     public Peer To { get; init; } = new();
-    
+    public EventStatus Status { get; set; } 
     public bool IsActive { get; set; }
 }

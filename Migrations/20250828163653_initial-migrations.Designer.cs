@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MonadNftMarket.Migrations
 {
     [DbContext(typeof(ApiDbContext))]
-    [Migration("20250827234317_initial-migrations")]
+    [Migration("20250828163653_initial-migrations")]
     partial class initialmigrations
     {
         /// <inheritdoc />
@@ -99,6 +99,10 @@ namespace MonadNftMarket.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("seller_address");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
                     b.Property<string>("TokenId")
                         .IsRequired()
                         .HasColumnType("text")
@@ -135,6 +139,10 @@ namespace MonadNftMarket.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_read");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -146,10 +154,6 @@ namespace MonadNftMarket.Migrations
                         .HasMaxLength(70)
                         .HasColumnType("character varying(70)")
                         .HasColumnName("transaction_hash");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("integer")
-                        .HasColumnName("type");
 
                     b.Property<string>("UserAddress")
                         .IsRequired()
@@ -173,6 +177,10 @@ namespace MonadNftMarket.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
 
                     b.Property<string>("TradeId")
                         .IsRequired()

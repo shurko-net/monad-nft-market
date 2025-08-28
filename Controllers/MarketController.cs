@@ -179,11 +179,14 @@ public class MarketController(
         pageSize = Math.Max(1, pageSize);
 
         var address = userIdentity.GetAddressByCookie(HttpContext);
+
+        const int accepted = (int)EventStatus.TradeAccepted;
+        const int rejected = (int)EventStatus.TradeRejected;
         
         var history = await db.Notifications
             .AsNoTracking()
             .Where(n => n.UserAddress == address && 
-                        (n.Type == NotificationType.TradeAccepted || n.Type == NotificationType.TradeRejected))
+                        ((int)n.Status == accepted || (int)n.Status == rejected))
             .OrderByDescending(n => n.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)

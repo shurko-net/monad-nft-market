@@ -43,7 +43,8 @@ namespace MonadNftMarket.Migrations
                     price = table.Column<decimal>(type: "numeric", nullable: false),
                     is_sold = table.Column<bool>(type: "boolean", nullable: false),
                     is_active = table.Column<bool>(type: "boolean", nullable: false),
-                    buyer_address = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true)
+                    buyer_address = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    status = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -56,7 +57,7 @@ namespace MonadNftMarket.Migrations
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     user_address = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    type = table.Column<int>(type: "integer", nullable: false),
+                    status = table.Column<int>(type: "integer", nullable: false),
                     title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     body = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
                     is_read = table.Column<bool>(type: "boolean", nullable: false),
@@ -84,6 +85,7 @@ namespace MonadNftMarket.Migrations
                     to_address = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     to_token_ids = table.Column<string>(type: "text", nullable: false),
                     to_nft_contracts = table.Column<List<string>>(type: "text[]", nullable: false),
+                    status = table.Column<int>(type: "integer", nullable: false),
                     is_active = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
