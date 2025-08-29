@@ -11,4 +11,6 @@ public class ListingResponse
     public decimal Price { get; set; }
     public required Metadata Metadata { get; set; }
     public bool IsOwnedByCurrentUser { get; set; }
+    public EventStatus Status { get; set; }
+    public DateTime LastUpdated { get; set; }
 }

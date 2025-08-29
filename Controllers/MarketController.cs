@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using MonadNftMarket.Context;
 using MonadNftMarket.Models;
 using MonadNftMarket.Models.DTO;
+using MonadNftMarket.Services.UpdateNftMetadata;
 
 namespace MonadNftMarket.Controllers;
 
@@ -14,8 +15,8 @@ namespace MonadNftMarket.Controllers;
 public class MarketController(
     IUserIdentity userIdentity,
     IMagicEdenProvider magicEdenProvider,
-    ApiDbContext db,
-    ILogger<MarketController> logger) : ControllerBase
+    IUpdateMetadata updateMetadata,
+    ApiDbContext db) : ControllerBase
 {
     [Authorize]
     [HttpGet("user-tokens")]
@@ -48,15 +49,16 @@ public class MarketController(
         [FromQuery] bool excludeSelf = false)
     {
         var address = userIdentity.GetAddressByCookie(HttpContext);
+        var cutoff = DateTime.UtcNow.AddDays(-7);
         if (string.IsNullOrEmpty(address))
             excludeSelf = false;
 
         page = Math.Max(1, page);
         pageSize = Math.Max(1, pageSize);
-
+        
         var query = db.Listings
             .AsNoTracking()
-            .Where(l => l.IsActive);
+            .Where(l => l.Status == EventStatus.ListingCreated);
 
         if (excludeSelf)
             query = query.Where(l => l.SellerAddress != address);
@@ -65,34 +67,42 @@ public class MarketController(
             .OrderBy(l => l.ListingId)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .ToListAsync();
-
-        if (listings.Count == 0)
-            return Ok(Array.Empty<ListingResponse>());
-
-        var contracts = listings.Select(l => l.NftContractAddress).ToList();
-        var tokenIds = listings.Select(l => l.TokenId).ToList();
-        
-        var metadata = await magicEdenProvider.GetListingMetadataAsync(contracts, tokenIds);
-
-        var response = listings.Select(l =>
-        {
-            var key = $"{l.NftContractAddress.ToLowerInvariant()}:{l.TokenId}";
-            metadata.TryGetValue(key, out var m);
-
-            return new ListingResponse
+            .Select(l => new ListingResponse
             {
                 ListingId = l.ListingId,
                 ContractAddress = l.NftContractAddress,
                 TokenId = l.TokenId,
                 SellerAddress = l.SellerAddress,
                 Price = l.Price,
-                Metadata = m ?? new(),
-                IsOwnedByCurrentUser = !string.IsNullOrEmpty(address) && l.SellerAddress == address
-            };
-        }).ToList();
+                Metadata = new ()
+                {
+                    Kind = l.NftMetadata.Kind,
+                    Name = l.NftMetadata.Name,
+                    ImageOriginal = l.NftMetadata.ImageOriginal,
+                    Description = l.NftMetadata.Description,
+                    LastPrice = l.NftMetadata.LastPrice
+                },
+                IsOwnedByCurrentUser = l.SellerAddress == address,
+                Status = l.Status,
+                LastUpdated = l.NftMetadata.LastUpdated
+            })
+            .ToListAsync();
 
-        return Ok(response);
+        if (listings.Count == 0)
+            return Ok(Array.Empty<ListingResponse>());
+        
+        var outdatedPairs = listings
+            .Where(x => x.LastUpdated < cutoff)
+            .Select(x => new {x.ContractAddress, x.TokenId})
+            .Distinct()
+            .ToList();
+        
+        if(outdatedPairs.Count > 0)
+            await updateMetadata.UpdateMetadataAsync(
+                outdatedPairs.Select(o => o.ContractAddress).ToList()!,
+                outdatedPairs.Select(o => o.TokenId).ToList());
+        
+        return Ok(listings);
     }
 
     [Authorize]
@@ -109,14 +119,14 @@ public class MarketController(
         pageSize = Math.Max(1, pageSize);
 
         var address = userIdentity.GetAddressByCookie(HttpContext);
-
+        
         var baseQuery = db.Trades
             .AsNoTracking()
-            .Where(t => t.IsActive)
+            .Where(t => t.Status == EventStatus.TradeCreated)
             .Include(t => t.From)
             .Include(t => t.To)
             .AsSplitQuery()
-            .OrderByDescending(t => t.EventMetadata.Timestamp)
+            .OrderByDescending(t => t.TradeId)
             .AsQueryable();
 
         baseQuery = dir switch
@@ -135,37 +145,58 @@ public class MarketController(
         if (trades.Count == 0)
             return Ok(Array.Empty<TradeResponse>());
 
-        var result = new List<TradeResponse>();
+        var allIds = trades.SelectMany(t => t.ListingIds).Distinct().ToArray();
 
+        var metadata = await db.Listings
+            .Where(l => allIds.Contains(l.ListingId))
+            .Select(l => new TradeMetadataDto
+            {
+                ListingId = l.ListingId,
+                Kind = l.NftMetadata.Kind,
+                NftContractAddress = l.NftMetadata.NftContractAddress,
+                TokenId = l.NftMetadata.TokenId,
+                Description = l.NftMetadata.Kind,
+                ImageOriginal = l.NftMetadata.ImageOriginal,
+                Price = l.Price
+            })
+            .ToDictionaryAsync(x => x.ListingId);
+
+        var tradeMetadataByTradeId = trades
+            .ToDictionary(
+                t => t.TradeId,
+                t => t.ListingIds
+                    .Select(id => metadata.GetValueOrDefault(id))
+                    .Where(dto => dto != null)
+                    .ToList());
+
+        var result = new List<TradeResponse>();
+        
         foreach (var trade in trades)
         {
-            var metadata = await magicEdenProvider.GetTradeMetadataAsync(trade);
-
+            var fromMeta = await magicEdenProvider
+                .GetListingMetadataAsync(trade.From.NftContracts.ToList(),
+                    trade.From.TokenIds.ToList());
+            tradeMetadataByTradeId.TryGetValue(trade.TradeId, out var toMeta);
+            
             result.Add(new TradeResponse
             {
-                TradeId = metadata.TradeId,
-                FromAddress = metadata.FromAddress,
-                ToAddress = metadata.ToAddress,
-                FromMetadata = metadata.From.Select(m => new Metadata
-                {
-                    Kind = m.Kind,
-                    Name = m.Name,
-                    ImageOriginal = m.ImageOriginal,
-                    Description = m.Description,
-                    LastPrice = m.LastPrice
-                }),
-                ToMetadata = metadata.To.Select(m => new Metadata
-                {
-                    Kind = m.Kind,
-                    Name = m.Name,
-                    ImageOriginal = m.ImageOriginal,
-                    Description = m.Description,
-                    LastPrice = m.LastPrice
-                }),
-                IsIncoming = metadata.ToAddress == address
+                TradeId = trade.TradeId,
+                FromAddress = trade.From.Address,
+                ToAddress = trade.To.Address,
+                FromMetadata = fromMeta.Values
+                    .Select(m => new TradeMetadataDto
+                    {
+                        Kind = m.Kind,
+                        Description = m.Description,
+                        ImageOriginal = m.ImageOriginal,
+                        Price = m.LastPrice ?? 0m
+                    }),
+                ToMetadata = toMeta!,
+                IsIncoming = trade.To.Address == address,
+                Status = trade.Status
             });
         }
-
+        
         return Ok(result);
     }
 
@@ -182,16 +213,16 @@ public class MarketController(
 
         const int accepted = (int)EventStatus.TradeAccepted;
         const int rejected = (int)EventStatus.TradeRejected;
-        
-        var history = await db.Notifications
+
+        var history = db.Notifications
             .AsNoTracking()
-            .Where(n => n.UserAddress == address && 
+            .Where(n => n.UserAddress == address &&
                         ((int)n.Status == accepted || (int)n.Status == rejected))
             .OrderByDescending(n => n.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
-        
-        return Ok(history);
+            
+        return Ok(await history);
     }
 }

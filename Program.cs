@@ -18,6 +18,7 @@ using MonadNftMarket.Services.EventParser;
 using MonadNftMarket.Services.Monad;
 using MonadNftMarket.Services.Notifications;
 using MonadNftMarket.Services.Token;
+using MonadNftMarket.Services.UpdateNftMetadata;
 
 var builder = WebApplication.CreateBuilder(args);
 var myAllowSpecificOrigins = "_myAllowSpecificOrigins";
@@ -85,6 +86,7 @@ builder.Services.AddSingleton<IMonadService, MonadService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IUserIdentity, UserIdentity>();
 builder.Services.AddSingleton<IUserIdProvider, WalletUserIdProvider>();
+builder.Services.AddScoped<IUpdateMetadata, UpdateMetadata>();
 builder.Services.AddMemoryCache();
 
 builder.Services.AddHostedService<RecordChanges>();

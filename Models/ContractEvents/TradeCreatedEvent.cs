@@ -14,4 +14,7 @@ public class TradeCreatedEvent : IEventDTO
     
     [Parameter("address", "to", 3, true)]
     public string? To { get; set; }
+
+    [Parameter("uint256[]", "listingIds", 4, false)]
+    public List<BigInteger> ListingIds { get; set; } = new();
 }

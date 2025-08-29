@@ -28,19 +28,17 @@ public class NotificationService : INotificationService
         string userAddress,
         EventStatus status,
         string title,
-        string body,
-        string txHash)
+        string body)
     {
         userAddress = Normalize(userAddress);
         
         var notification = new Notification
         {
             UserAddress = userAddress,
-            Status= status,
+            Status = status,
             Title = title,
             Body = body,
-            IsRead = false,
-            TransactionHash = txHash
+            IsRead = false
         };
 
         _db.Notifications.Add(notification);
@@ -90,8 +88,7 @@ public class NotificationService : INotificationService
                 Title = n.Title,
                 Body = n.Body,
                 IsRead = n.IsRead,
-                CreatedAt = n.CreatedAt,
-                TransactionHash = n.TransactionHash
+                CreatedAt = n.CreatedAt
             })
             .ToListAsync();
 

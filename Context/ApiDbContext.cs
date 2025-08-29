@@ -1,6 +1,7 @@
 ﻿using System.Numerics;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MonadNftMarket.Models;
 
@@ -12,6 +13,7 @@ public class ApiDbContext(DbContextOptions<ApiDbContext> options) : DbContext(op
     public DbSet<Trade> Trades { get; set; }
     public DbSet<IndexerState> Indexer { get; set; }
     public DbSet<Notification> Notifications { get; set; }
+    public DbSet<History> History { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         var bigIntListConverter = new ValueConverter<List<BigInteger>, string>(
@@ -19,6 +21,11 @@ public class ApiDbContext(DbContextOptions<ApiDbContext> options) : DbContext(op
             fromDb => JsonSerializer.Deserialize<List<string>>(fromDb, (JsonSerializerOptions?)null)!
                 .Select(BigInteger.Parse).ToList()
         );
+
+        var bigIntListComparer = new ValueComparer<List<BigInteger>>(
+            (a, b) => a == null && b == null || (a != null && b != null && a.SequenceEqual(b)),
+            a => a.Aggregate(0, (h, v) => HashCode.Combine(h, v.GetHashCode())),
+            a => a.ToList());
         
         modelBuilder.Entity<IndexerState>()
             .HasData(new IndexerState
@@ -48,16 +55,7 @@ public class ApiDbContext(DbContextOptions<ApiDbContext> options) : DbContext(op
                 v => BigInteger.Parse(v))
             .HasColumnType("text");
 
-        modelBuilder.Entity<Listing>()
-            .OwnsOne(e => e.EventMetadata, meta =>
-            {
-                meta.Property(m => m.BlockNumber)
-                    .HasConversion(v => v.ToString(),
-                        v => BigInteger.Parse(v))
-                    .HasColumnType("text");
-            });
-        
-        modelBuilder.Entity<Trade>()
+        modelBuilder.Entity<History>()
             .OwnsOne(e => e.EventMetadata, meta =>
             {
                 meta.Property(m => m.BlockNumber)
@@ -78,7 +76,8 @@ public class ApiDbContext(DbContextOptions<ApiDbContext> options) : DbContext(op
             {
                 peer.Property(m => m.TokenIds)
                     .HasConversion(bigIntListConverter)
-                    .HasColumnType("text");
+                    .HasColumnType("text")
+                    .Metadata.SetValueComparer(bigIntListComparer);
             });
         
         modelBuilder.Entity<Trade>()
@@ -86,8 +85,17 @@ public class ApiDbContext(DbContextOptions<ApiDbContext> options) : DbContext(op
             {
                 peer.Property(m => m.TokenIds)
                     .HasConversion(bigIntListConverter)
-                    .HasColumnType("text");
+                    .HasColumnType("text")
+                    .Metadata.SetValueComparer(bigIntListComparer);
+                    
             });
+
+        modelBuilder.Entity<Trade>(entity =>
+        {
+            entity.Property(e => e.ListingIds)
+                .HasConversion(bigIntListConverter)
+                .Metadata.SetValueComparer(bigIntListComparer);
+        });
         
         modelBuilder.Entity<Listing>()
             .HasIndex(l => l.ListingId)
@@ -96,5 +104,32 @@ public class ApiDbContext(DbContextOptions<ApiDbContext> options) : DbContext(op
         modelBuilder.Entity<Trade>()
             .HasIndex(l => l.TradeId)
             .IsUnique();
+
+        modelBuilder.Entity<Listing>()
+            .Property(l => l.Status)
+            .HasConversion<int>();
+        
+        modelBuilder.Entity<Trade>()
+            .Property(l => l.Status)
+            .HasConversion<int>();
+        
+        modelBuilder.Entity<History>()
+            .Property(l => l.Status)
+            .HasConversion<int>();
+        
+        modelBuilder.Entity<Notification>()
+            .Property(l => l.Status)
+            .HasConversion<int>();
+
+        modelBuilder.Entity<Listing>()
+            .HasIndex(l => new { l.Status, l.ListingId });
+
+        modelBuilder.Entity<Trade>()
+            .HasIndex(l => new { l.Status, l.TradeId });
+
+        modelBuilder.Entity<Listing>()
+            .OwnsOne<NftMetadata>(l => l.NftMetadata);
+        
+        base.OnModelCreating(modelBuilder);
     }
 }
