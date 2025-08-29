@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using MonadNftMarket.Models;
 using MonadNftMarket.Services.Notifications;
 using MonadNftMarket.Services.Token;
 
@@ -67,5 +68,6 @@ public class NotificationHub : Hub
         
         await Clients.Caller.SendAsync(HubMethods.UnreadCountUpdated,
             await _notificationService.GetUnreadCountAsync(userId));
+        await Clients.Caller.SendAsync(HubMethods.InitNotifications, Array.Empty<Notification>());
     }
 }
