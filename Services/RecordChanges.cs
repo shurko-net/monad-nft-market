@@ -291,7 +291,7 @@ public class RecordChanges : BackgroundService
                                     .NotifyAsync(lst.BuyerAddress,
                                         EventStatus.ListingBought,
                                         "Listing sold",
-                                        $"Your listing #{lst.ListingId} was bought by you for {lst.Price} ETH");
+                                        $"Listing #{lst.ListingId} was bought by you for {lst.Price} ETH");
                                 
                                 await notifyService.NotifyMarketUpdateAsync();
                             }
