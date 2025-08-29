@@ -64,7 +64,7 @@ public class MarketController(
             query = query.Where(l => l.SellerAddress != address);
 
         var listings = await query
-            .OrderBy(l => l.ListingId)
+            .OrderByDescending(l => l.ListingId)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(l => new ListingResponse
