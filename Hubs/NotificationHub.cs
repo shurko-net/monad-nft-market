@@ -36,7 +36,7 @@ public class NotificationHub : Hub
         await Clients.Caller.SendAsync(HubMethods.UnreadCountUpdated,
             await _notificationService.GetUnreadCountAsync(userId));
 
-        var unreaded = await _notificationService.GetUnreadNotifications(userId);
+        var unreaded = await _notificationService.GetUnreadNotificationsAsync(userId);
 
         await Clients.Caller.SendAsync(HubMethods.InitNotifications, unreaded);
         
@@ -49,7 +49,7 @@ public class NotificationHub : Hub
         
         await _notificationService.MarkAsReadAsync(userId, notificationId);
 
-        var unreaded = await _notificationService.GetUnreadNotifications(userId);
+        var unreaded = await _notificationService.GetUnreadNotificationsAsync(userId);
 
         await Clients.Caller.SendAsync(HubMethods.InitNotifications, unreaded);
         

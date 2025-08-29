@@ -14,7 +14,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MonadNftMarket.Migrations
 {
     [DbContext(typeof(ApiDbContext))]
-    [Migration("20250829142819_initial-migrations")]
+    [Migration("20250829180715_initial-migrations")]
     partial class initialmigrations
     {
         /// <inheritdoc />
@@ -50,8 +50,17 @@ namespace MonadNftMarket.Migrations
                         .HasColumnType("numeric")
                         .HasColumnName("trade_id");
 
+                    b.Property<string>("UserAddress")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("user_address");
+
                     b.HasKey("Id")
                         .HasName("pk_history");
+
+                    b.HasIndex("UserAddress", "Status")
+                        .HasDatabaseName("ix_history_user_address_status");
 
                     b.ToTable("history", (string)null);
                 });

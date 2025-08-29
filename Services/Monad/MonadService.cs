@@ -10,7 +10,7 @@ namespace MonadNftMarket.Services.Monad;
 
 public class MonadService : IMonadService
 {
-    private static readonly Random Jitterer = new Random();
+    private static readonly Random Jitterer = new();
     private readonly Web3 _web3;
     private readonly string _contractAddress;
     private readonly ILogger<MonadService> _logger;
@@ -73,5 +73,12 @@ public class MonadService : IMonadService
 
             return trade;
         }, cancellationToken);
+    }
+
+    public async Task<string> GetTransactionInitiator(string txHash)
+    {
+        var transaction = await _web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(txHash);
+
+        return transaction.From;
     }
 }

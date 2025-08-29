@@ -118,11 +118,14 @@ public class ApiDbContext(DbContextOptions<ApiDbContext> options) : DbContext(op
             .HasConversion<int>();
         
         modelBuilder.Entity<Notification>()
-            .Property(l => l.Status)
+            .Property(n => n.Status)
             .HasConversion<int>();
 
         modelBuilder.Entity<Listing>()
             .HasIndex(l => new { l.Status, l.ListingId });
+        
+        modelBuilder.Entity<History>()
+            .HasIndex(h => new { h.UserAddress, h.Status });
 
         modelBuilder.Entity<Trade>()
             .HasIndex(l => new { l.Status, l.TradeId });

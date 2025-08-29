@@ -5,8 +5,10 @@ public enum EventStatus
     ListingCreated,
     ListingRemoved,
     ListingSold,
+    ListingBought,
     TradeCreated,
     TradeAccepted,
     TradeRejected,
-    TradeCompleted
+    TradeCompleted,
+    TradeReceived
 }

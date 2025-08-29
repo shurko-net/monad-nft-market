@@ -68,6 +68,7 @@ builder.Services.AddControllers()
     {
         opts.JsonSerializerOptions.Converters.Add(new BigIntegerJsonConverter());
         opts.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 builder.Services.AddSignalR()
     .AddHubOptions<NotificationHub>(opts => opts.AddFilter<HubAuthorize>())

@@ -48,7 +48,8 @@ public class NotificationService : INotificationService
         {
             await _hub.Clients.User(userAddress)
                 .SendAsync(HubMethods.UnreadCountUpdated, await GetUnreadCountAsync(userAddress));
-            await _hub.Clients.User(userAddress).SendAsync(HubMethods.InitNotifications, new[] { notification });
+            await _hub.Clients.User(userAddress).SendAsync(HubMethods.InitNotifications,
+                await GetUnreadNotificationsAsync(userAddress));
         }
         catch (Exception ex)
         {
@@ -75,7 +76,10 @@ public class NotificationService : INotificationService
     public async Task<int> GetUnreadCountAsync(string userAddress) 
         => await _db.Notifications.CountAsync(n => n.UserAddress == userAddress && !n.IsRead);
 
-    public async Task<List<Notification>> GetUnreadNotifications(string userAddress)
+    public async Task NotifyMarketUpdateAsync()
+        => await _hub.Clients.All.SendAsync(HubMethods.UpdateMarket, "Market updated");
+
+    public async Task<List<Notification>> GetUnreadNotificationsAsync(string userAddress)
     {
         var notifications = await _db.Notifications
             .Where(n => !n.IsRead && n.UserAddress == userAddress)

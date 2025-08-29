@@ -19,6 +19,7 @@ namespace MonadNftMarket.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_address = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     event_metadata_block_number = table.Column<string>(type: "text", nullable: false),
                     event_metadata_block_hash = table.Column<string>(type: "character varying(70)", maxLength: 70, nullable: false),
                     event_metadata_timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -115,6 +116,11 @@ namespace MonadNftMarket.Migrations
                 table: "indexer",
                 columns: new[] { "id", "last_processed_block", "updated_at" },
                 values: new object[] { 1, "0", new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified) });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_history_user_address_status",
+                table: "history",
+                columns: new[] { "user_address", "status" });
 
             migrationBuilder.CreateIndex(
                 name: "ix_listings_listing_id",

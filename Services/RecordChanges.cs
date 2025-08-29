@@ -161,6 +161,7 @@ public class RecordChanges : BackgroundService
                                         Timestamp = pe.BlockTimestamp,
                                         TransactionHash = pe.TransactionHash
                                     },
+                                    UserAddress = await _monadService.GetTransactionInitiator(pe.TransactionHash),
                                     ListingId = e.Id,
                                     TradeId = null,
                                     Status = lst.Status,
@@ -178,6 +179,8 @@ public class RecordChanges : BackgroundService
                                         $"You created listing #{lst.ListingId}. Price: {lst.Price} ETH");
 
                                 _logger.LogInformation($"New listing: {e.Id}");
+
+                                await notifyService.NotifyMarketUpdateAsync();
                             }
                             catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException pg
                                                                 && pg.SqlState == "23505")
@@ -212,6 +215,7 @@ public class RecordChanges : BackgroundService
                                         Timestamp = pe.BlockTimestamp,
                                         TransactionHash = pe.TransactionHash
                                     },
+                                    UserAddress = await _monadService.GetTransactionInitiator(pe.TransactionHash),
                                     ListingId = lst.ListingId,
                                     TradeId = null,
                                     Status = lst.Status,
@@ -220,14 +224,8 @@ public class RecordChanges : BackgroundService
                                 
                                 await db.History.AddAsync(history, cancellationToken: stoppingToken);
                                 await db.SaveChangesAsync(stoppingToken);
-                                
-                                await notifyService
-                                    .NotifyAsync(lst.SellerAddress,
-                                        EventStatus.ListingRemoved,
-                                        "Listing removed",
-                                        $"Your listing #{lst.ListingId} has been removed. Price: {lst.Price} ETH");
+                                await notifyService.NotifyMarketUpdateAsync();
                             }
-
                             break;
                         }
                         case ListingSoldEvent e:
@@ -247,7 +245,7 @@ public class RecordChanges : BackgroundService
                                 lst.BuyerAddress = e.Buyer;
                                 lst.Status = EventStatus.ListingSold;
                                 
-                                var history = new History
+                                var historySeller = new History
                                 {
                                     EventMetadata = new()
                                     {
@@ -256,13 +254,31 @@ public class RecordChanges : BackgroundService
                                         Timestamp = pe.BlockTimestamp,
                                         TransactionHash = pe.TransactionHash
                                     },
+                                    UserAddress = lst.SellerAddress,
                                     ListingId = lst.ListingId,
                                     TradeId = null,
                                     Status = lst.Status,
                                     CreatedAt = DateTime.UtcNow
                                 };
+                                
+                                var historyBuyer = new History
+                                {
+                                    EventMetadata = new()
+                                    {
+                                        BlockNumber = pe.BlockNumber,
+                                        BlockHash = pe.BlockHash,
+                                        Timestamp = pe.BlockTimestamp,
+                                        TransactionHash = pe.TransactionHash
+                                    },
+                                    UserAddress = lst.BuyerAddress,
+                                    ListingId = lst.ListingId,
+                                    TradeId = null,
+                                    Status = EventStatus.ListingBought,
+                                    CreatedAt = DateTime.UtcNow
+                                };
 
-                                await db.History.AddAsync(history, cancellationToken: stoppingToken);
+                                await db.History.AddAsync(historySeller, cancellationToken: stoppingToken);
+                                await db.History.AddAsync(historyBuyer, cancellationToken: stoppingToken);
                                 await db.SaveChangesAsync(stoppingToken);
                                 
                                 await notifyService
@@ -270,6 +286,14 @@ public class RecordChanges : BackgroundService
                                         EventStatus.ListingSold,
                                         "Listing sold",
                                         $"Your listing #{lst.ListingId} was bought by {lst.BuyerAddress} for {lst.Price} ETH");
+                                
+                                await notifyService
+                                    .NotifyAsync(lst.BuyerAddress,
+                                        EventStatus.ListingBought,
+                                        "Listing sold",
+                                        $"Your listing #{lst.ListingId} was bought by you for {lst.Price} ETH");
+                                
+                                await notifyService.NotifyMarketUpdateAsync();
                             }
 
                             break;
@@ -307,7 +331,7 @@ public class RecordChanges : BackgroundService
                                 Status = EventStatus.TradeCreated
                             };
                             
-                            var history = new History
+                            var historyFrom = new History
                             {
                                 EventMetadata = new()
                                 {
@@ -316,22 +340,43 @@ public class RecordChanges : BackgroundService
                                     Timestamp = pe.BlockTimestamp,
                                     TransactionHash = pe.TransactionHash
                                 },
+                                UserAddress = trade.From.Address,
                                 ListingId = null,
                                 TradeId = trade.TradeId,
                                 Status = trade.Status,
                                 CreatedAt = DateTime.UtcNow
                             };
+                            
+                            var historyTo = new History
+                            {
+                                EventMetadata = new()
+                                {
+                                    BlockNumber = pe.BlockNumber,
+                                    BlockHash = pe.BlockHash,
+                                    Timestamp = pe.BlockTimestamp,
+                                    TransactionHash = pe.TransactionHash
+                                },
+                                UserAddress = trade.To.Address,
+                                ListingId = null,
+                                TradeId = trade.TradeId,
+                                Status = EventStatus.TradeReceived,
+                                CreatedAt = DateTime.UtcNow
+                            };
 
                             await db.Trades.AddAsync(trade, cancellationToken: stoppingToken);
-                            await db.History.AddAsync(history, cancellationToken: stoppingToken);
+                            await db.History.AddAsync(historyFrom, cancellationToken: stoppingToken);
+                            await db.History.AddAsync(historyTo, cancellationToken: stoppingToken);
                             await db.SaveChangesAsync(stoppingToken);
                             
-                            var toAddress = trade.To.Address.ToLowerInvariant();
-                            await notifyService.NotifyAsync(toAddress,
+                            await notifyService.NotifyAsync(trade.From.Address.ToLowerInvariant(),
                                 EventStatus.TradeCreated,
+                                "Trade created",
+                                $"You create trade #{trade.TradeId}, second peer of trade - {trade.From.Address.ToLowerInvariant()}");
+                            
+                            await notifyService.NotifyAsync(trade.To.Address.ToLowerInvariant(),
+                                EventStatus.TradeReceived,
                                 "Incoming trade",
                                 $"You received trade #{trade.TradeId} from {trade.From.Address}");
-
                             break;
                         }
                         case TradeAcceptedEvent e:
@@ -345,11 +390,10 @@ public class RecordChanges : BackgroundService
                             
                             await CloseTradeAsync(e.TradeId, db, notifyService,
                                 EventStatus.TradeAccepted,
-                                $"Trade accepted",
-                                $"Your trade #{e.TradeId} has been accepted",
                                 pe,
                                 stoppingToken);
                             
+                            await notifyService.NotifyMarketUpdateAsync();
                             break;
                         }
                         case TradeCompletedEvent e:
@@ -363,8 +407,6 @@ public class RecordChanges : BackgroundService
                             
                             await CloseTradeAsync(e.TradeId, db, notifyService,
                                 EventStatus.TradeCompleted,
-                                $"Trade completed",
-                                $"Your trade #{e.TradeId} final preparations for trade confirmation",
                                 pe,
                                 stoppingToken);
                             
@@ -381,8 +423,6 @@ public class RecordChanges : BackgroundService
                             
                             await CloseTradeAsync(e.TradeId, db, notifyService,
                                 EventStatus.TradeRejected,
-                                $"Trade rejected",
-                                $"Your trade #{e.TradeId} has been rejected by second side",
                                 pe,
                                 stoppingToken);
                             
@@ -408,8 +448,6 @@ public class RecordChanges : BackgroundService
         ApiDbContext db,
         INotificationService notifyService,
         EventStatus status,
-        string title,
-        string message,
         ParsedEvent pe,
         CancellationToken stoppingToken)
     {
@@ -419,37 +457,70 @@ public class RecordChanges : BackgroundService
         if (trade is null) return;
         
         trade.Status = status;
-        var history = new History
+
+        await db.History.AddRangeAsync(new List<History>
         {
-            EventMetadata = new()
+            new()
             {
-                BlockNumber = pe.BlockNumber,
-                BlockHash = pe.BlockHash,
-                Timestamp = pe.BlockTimestamp,
-                TransactionHash = pe.TransactionHash
+                UserAddress = trade.From.Address,
+                EventMetadata = new()
+                {
+                    BlockNumber = pe.BlockNumber,
+                    BlockHash = pe.BlockHash,
+                    Timestamp = pe.BlockTimestamp,
+                    TransactionHash = pe.TransactionHash
+                },
+                ListingId = null,
+                TradeId = tradeId,
+                Status = status,
+                CreatedAt = DateTime.UtcNow
             },
-            ListingId = null,
-            TradeId = trade.TradeId,
-            Status = trade.Status,
-            CreatedAt = DateTime.UtcNow
-        };
-        
-        await db.History.AddAsync(history, cancellationToken: stoppingToken);
+            new()
+            {
+                UserAddress = trade.To.Address,
+                EventMetadata = new()
+                {
+                    BlockNumber = pe.BlockNumber,
+                    BlockHash = pe.BlockHash,
+                    Timestamp = pe.BlockTimestamp,
+                    TransactionHash = pe.TransactionHash
+                },
+                ListingId = null,
+                TradeId = tradeId,
+                Status = status,
+                CreatedAt = DateTime.UtcNow
+            }
+        }, stoppingToken);
+
         await db.SaveChangesAsync(stoppingToken);
 
-        if (status == EventStatus.TradeCreated)
+        var notifications = status switch
         {
-            if (!string.IsNullOrEmpty(trade.From.Address))
+            EventStatus.TradeAccepted => new[]
             {
-                var fromAddress =  trade.From.Address.ToLowerInvariant();
-                await notifyService.NotifyAsync(fromAddress, status,
-                    "Outcoming trade",
-                    $"You sent trade #{trade.Id} to {trade.To.Address}");
-            }
-        }
-        
-        var toAddress = trade.To.Address.ToLowerInvariant();
-        await notifyService.NotifyAsync(toAddress, status, title, message);
+                (trade.From.Address.ToLowerInvariant(), status, "Trade accepted",
+                    $"Your trade #{trade.Id} has been accepted"),
+                (trade.To.Address.ToLowerInvariant(), status, "Trade accepted", $"Trade #{trade.Id} has been accepted")
+            },
+            EventStatus.TradeCompleted => new[]
+            {
+                (trade.From.Address.ToLowerInvariant(), status, "Trade completed",
+                    $"Your trade #{trade.TradeId} final preparations for trade confirmation"),
+                (trade.To.Address.ToLowerInvariant(), status, "Trade completed",
+                    $"Trade #{trade.TradeId} final preparations for trade confirmation")
+            },
+            EventStatus.TradeRejected => new[]
+            {
+                (trade.From.Address.ToLowerInvariant(), status, "Trade rejected",
+                    $"Your trade #{trade.TradeId} has been rejected by second side"),
+                (trade.To.Address.ToLowerInvariant(), status, "Trade rejected",
+                    $"Trade #{trade.TradeId} has been rejected by second side")
+            },
+            _ => Array.Empty<(string Recipient, EventStatus Status, string Title, string Body)>()
+        };
+
+        await Task.WhenAll(notifications.Select(n =>
+            notifyService.NotifyAsync(n.Item1, n.Item2, n.Item3, n.Item4)));
     }
 
     private string MakeKey(string contract, BigInteger tokenId)

@@ -211,18 +211,21 @@ public class MarketController(
 
         var address = userIdentity.GetAddressByCookie(HttpContext);
 
-        const int accepted = (int)EventStatus.TradeAccepted;
-        const int rejected = (int)EventStatus.TradeRejected;
-
-        var history = db.Notifications
+        var history = await db.History
             .AsNoTracking()
-            .Where(n => n.UserAddress == address &&
-                        ((int)n.Status == accepted || (int)n.Status == rejected))
-            .OrderByDescending(n => n.CreatedAt)
+            .Where(h => h.UserAddress == address)
+            .Select(h => new HistoryDto
+            {
+                UserAddress = h.UserAddress,
+                Status = h.Status,
+                ListingId = h.ListingId,
+                TradeId = h.TradeId,
+                Metadata = h.EventMetadata
+            })
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
-            
-        return Ok(await history);
+        
+        return Ok(history);
     }
 }
