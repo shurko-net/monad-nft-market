@@ -89,6 +89,7 @@ public class MarketController(
                 ? query.OrderByDescending(l => l.SellerAddress)
                 : query.OrderBy(l => l.SellerAddress),
             "price" => orderBy == "desc" ? query.OrderByDescending(l => l.Price) : query.OrderBy(l => l.Price),
+            "name" => orderBy == "desc" ? query.OrderByDescending(l => l.NftMetadata.Name) : query.OrderBy(l => l.NftMetadata.Name),
             _ => orderBy == "desc" ? query.OrderByDescending(l => l.ListingId) : query.OrderBy(l => l.ListingId)
         };
 
