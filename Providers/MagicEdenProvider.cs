@@ -2,6 +2,7 @@ using System.Numerics;
 using MonadNftMarket.Models.DTO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using MonadNftMarket.Configuration;
@@ -27,26 +28,24 @@ public class MagicEdenProvider : IMagicEdenProvider
         _cache = cache;
         _logger = logger;
     }
-    private string BuildUserTokensUrl(string userAddress)
+    private string BuildUserTokensUrl(string userAddress, bool sortByDesc)
     {
         if(string.IsNullOrEmpty(userAddress))
             throw new ArgumentException("userAddress is required", nameof(userAddress));
 
-        return _userTokensUrl.Replace($"{{{nameof(userAddress)}}}", Uri.EscapeDataString(userAddress));
+        var url = _userTokensUrl.Replace($"{{{nameof(userAddress)}}}", userAddress);
+        var query = new Dictionary<string, string?>
+        {
+            ["sortDirection"] = sortByDesc ? "desc" : "asc"
+        };
+        
+        Console.WriteLine(QueryHelpers.AddQueryString(url, query));
+        return QueryHelpers.AddQueryString(url, query);
     }
-    private string BuildTokensMetadataUrl(Peer peer)
-    {
-        if(peer.NftContracts.Count == 0 || peer.TokenIds.Count == 0)
-            _logger.LogCritical("No BuildTokensMetadataUrl contracts found");
-        
-        var zip = peer.NftContracts.Zip(peer.TokenIds,
-            (contract, id) => $"{contract}:{id}");
-        
-        var qsParts = zip.Select(t => "tokens=" + Uri.EscapeDataString(t));
-        
-        return _tokensMetadataUrl + "?" + string.Join("&", qsParts);
-    }
-    private string BuildTokensMetadataUrl(List<string> contracts, List<BigInteger> ids)
+    private string BuildTokensMetadataUrl(
+        List<string> contracts,
+        List<BigInteger> ids,
+        bool sortByDesc)
     {
         if(contracts.Count == 0 || ids.Count == 0)
             return string.Empty;
@@ -55,8 +54,14 @@ public class MagicEdenProvider : IMagicEdenProvider
             (contract, id) => $"{contract}:{id}");
         
         var qsParts = zip.Select(t => "tokens=" + Uri.EscapeDataString(t));
+
+        var url = _tokensMetadataUrl + "?" + string.Join("&", qsParts);
+        var query = new Dictionary<string, string?>
+        {
+            ["sortDirection"] = sortByDesc ? "desc" : "asc"
+        };
         
-        return _tokensMetadataUrl + "?" + string.Join("&", qsParts);
+        return QueryHelpers.AddQueryString(url, query);
     }
     private async Task<List<JsonDocument>> GetAllPagesAsync(string baseUrl)
     {
@@ -157,9 +162,9 @@ public class MagicEdenProvider : IMagicEdenProvider
         }).ToList();
     }
 
-    public async Task<List<UserToken>> GetUserTokensAsync(string userAddress)
+    public async Task<List<UserToken>> GetUserTokensAsync(string userAddress, bool sortByDesc)
     {
-        var cacheKey = $"{nameof(GetUserTokensAsync)}_{userAddress}";
+        var cacheKey = $"{nameof(GetUserTokensAsync)}_{userAddress}_{sortByDesc}";
 
         if (_cache.TryGetValue(cacheKey, out List<UserToken>? cached))
         {
@@ -167,7 +172,7 @@ public class MagicEdenProvider : IMagicEdenProvider
                 return cached;
         }
 
-        var url = BuildUserTokensUrl(userAddress);
+        var url = BuildUserTokensUrl(userAddress, sortByDesc);
         var allTokens = await DeserializeMetadata(url);
         
         var result = ToUserToken(allTokens);
@@ -185,50 +190,15 @@ public class MagicEdenProvider : IMagicEdenProvider
         return result;
     }
 
-    public async Task<TradeMetadata> GetTradeMetadataAsync(Trade trade)
-    {
-        var cacheKey = $"{nameof(GetTradeMetadataAsync)}_{trade.TradeId}";
-
-        if (_cache.TryGetValue(cacheKey, out TradeMetadata? cached))
-        {
-            if (cached != null)
-                return cached;
-        }
-        
-        var fromTokens = await DeserializeMetadata(BuildTokensMetadataUrl(trade.From));
-        var toTokens = await DeserializeMetadata(BuildTokensMetadataUrl(trade.To));
-
-        var from = ToUserToken(fromTokens);
-        var to = ToUserToken(toTokens);
-
-        var result = new TradeMetadata
-        {
-            TradeId = trade.TradeId,
-            FromAddress = trade.From.Address,
-            ToAddress = trade.To.Address,
-            From = from,
-            To = to
-        };
-        
-        _cache.Set(
-            cacheKey,
-            result,
-            new MemoryCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1),
-                SlidingExpiration = TimeSpan.FromSeconds(30),
-                Priority = CacheItemPriority.Normal
-            });
-        
-        return result;
-    }
-    
-    public async Task<IReadOnlyDictionary<string, Metadata>> GetListingMetadataAsync(List<string> contracts, List<BigInteger> ids)
+    public async Task<IReadOnlyDictionary<string, Metadata>> GetListingMetadataAsync(
+        List<string> contracts,
+        List<BigInteger> ids,
+        bool sortByDesc)
     {
         if (contracts.Count == 0 || ids.Count == 0)
             return new Dictionary<string, Metadata>(StringComparer.OrdinalIgnoreCase);
         
-        var url = BuildTokensMetadataUrl(contracts, ids);
+        var url = BuildTokensMetadataUrl(contracts, ids, sortByDesc);
         if(string.IsNullOrEmpty(url))
             return new Dictionary<string, Metadata>(StringComparer.OrdinalIgnoreCase);
         

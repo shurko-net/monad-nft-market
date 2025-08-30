@@ -18,10 +18,13 @@ public class UpdateMetadata : IUpdateMetadata
         _db = db;
     }
     
-    public async Task UpdateMetadataAsync(List<string> contractAddresses, List<BigInteger> tokenIds)
+    public async Task UpdateMetadataAsync(
+        List<string> contractAddresses,
+        List<BigInteger> tokenIds,
+        bool sortByDesc)
     {
         var metadata = await _magicEdenProvider
-            .GetListingMetadataAsync(contractAddresses, tokenIds);
+            .GetListingMetadataAsync(contractAddresses, tokenIds, sortByDesc);
 
         foreach (var data in contractAddresses.Zip(tokenIds))
         {

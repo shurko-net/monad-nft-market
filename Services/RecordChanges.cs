@@ -120,7 +120,7 @@ public class RecordChanges : BackgroundService
                                     break;
 
                                 var mtData = await _magicEdenProvider
-                                    .GetListingMetadataAsync([e.NftContract], [e.TokenId]);
+                                    .GetListingMetadataAsync([e.NftContract], [e.TokenId], true);
                                 
                                 var key = MakeKey(e.NftContract, e.TokenId);
 

@@ -20,11 +20,14 @@ public class MarketController(
 {
     [Authorize]
     [HttpGet("user-tokens")]
-    public async Task<IActionResult> GetUserTokens(int page = 1, int pageSize = 20)
+    public async Task<IActionResult> GetUserTokens(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] bool sortByDesc = true)
     {
         var address = userIdentity.GetAddressByCookie(HttpContext);
 
-        var userTokens = await magicEdenProvider.GetUserTokensAsync(address);
+        var userTokens = await magicEdenProvider.GetUserTokensAsync(address, sortByDesc);
 
         page = Math.Max(1, page);
         pageSize = Math.Max(1, pageSize);
@@ -108,7 +111,7 @@ public class MarketController(
         if(outdatedPairs.Count > 0)
             await updateMetadata.UpdateMetadataAsync(
                 outdatedPairs.Select(o => o.ContractAddress).ToList()!,
-                outdatedPairs.Select(o => o.TokenId).ToList());
+                outdatedPairs.Select(o => o.TokenId).ToList(), sortByDesc);
         
         return Ok(listings);
     }
@@ -183,7 +186,7 @@ public class MarketController(
         {
             var fromMeta = await magicEdenProvider
                 .GetListingMetadataAsync(trade.From.NftContracts.ToList(),
-                    trade.From.TokenIds.ToList());
+                    trade.From.TokenIds.ToList(), true);
             tradeMetadataByTradeId.TryGetValue(trade.TradeId, out var toMeta);
             
             result.Add(new TradeResponse
