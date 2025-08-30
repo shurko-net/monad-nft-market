@@ -136,7 +136,9 @@ public class MagicEdenProvider : IMagicEdenProvider
         if (tokens == null || tokens.Count == 0)
             return result;
         
-        return tokens.Where(x => x.Token.Kind == "erc721").Select(x =>
+        return tokens.Where(x => x.Token.Kind == "erc721" && 
+                                 !string.IsNullOrWhiteSpace(x.Token.Name))
+            .Select(x =>
         {
             var t = x.Token;
 

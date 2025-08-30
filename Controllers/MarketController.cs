@@ -51,8 +51,9 @@ public class MarketController(
         [FromQuery] int pageSize = 10,
         [FromQuery] bool excludeSelf = false,
         [FromQuery] string? seller = null,
-        [FromQuery] string sortBy = "ListingId",
-        [FromQuery] string orderBy = "desc")
+        [FromQuery] string sortBy = "id",
+        [FromQuery] string orderBy = "desc",
+        [FromQuery] string? search = null)
     {
         var allowedOrders = new[] { "asc", "desc" };
         if (!allowedOrders.Contains(orderBy, StringComparer.OrdinalIgnoreCase))
@@ -78,9 +79,9 @@ public class MarketController(
 
         query = sortBy.ToLowerInvariant() switch
         {
-            "listingid" => orderBy == "desc"
-                ? query.OrderByDescending(l => l.ListingId)
-                : query.OrderBy(l => l.ListingId),
+            "id" => orderBy == "desc"
+                ? query.OrderByDescending(l => l.Id)
+                : query.OrderBy(l => l.Id),
             "contractaddress" => orderBy == "desc"
                 ? query.OrderByDescending(l => l.NftContractAddress)
                 : query.OrderBy(l => l.NftContractAddress),
@@ -90,8 +91,18 @@ public class MarketController(
                 : query.OrderBy(l => l.SellerAddress),
             "price" => orderBy == "desc" ? query.OrderByDescending(l => l.Price) : query.OrderBy(l => l.Price),
             "name" => orderBy == "desc" ? query.OrderByDescending(l => l.NftMetadata.Name) : query.OrderBy(l => l.NftMetadata.Name),
-            _ => orderBy == "desc" ? query.OrderByDescending(l => l.ListingId) : query.OrderBy(l => l.ListingId)
+            _ => orderBy == "desc" ? query.OrderByDescending(l => l.Id) : query.OrderBy(l => l.Id)
         };
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            var term = search.Trim();
+            if (term.Length > 60)
+                term = term[..60];
+            
+            var pattern = $"%{term}%";
+            query = query.Where(l => EF.Functions.ILike(l.NftMetadata.Name, pattern));
+        }
 
         var listings = await query
             .Skip((page - 1) * pageSize)
@@ -177,6 +188,7 @@ public class MarketController(
         var allIds = trades.SelectMany(t => t.ListingIds).Distinct().ToArray();
 
         var metadata = await db.Listings
+            .OrderByDescending(l => l.Id)
             .Where(l => allIds.Contains(l.ListingId))
             .Select(l => new TradeMetadataDto
             {
