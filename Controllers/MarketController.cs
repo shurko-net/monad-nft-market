@@ -53,11 +53,24 @@ public class MarketController(
         [FromQuery] string? seller = null,
         [FromQuery] string sortBy = "id",
         [FromQuery] string orderBy = "desc",
-        [FromQuery] string? search = null)
+        [FromQuery] string? search = null,
+        [FromQuery] decimal? minPrice = null,
+        [FromQuery] decimal? maxPrice = null)
     {
         var allowedOrders = new[] { "asc", "desc" };
         if (!allowedOrders.Contains(orderBy, StringComparer.OrdinalIgnoreCase))
             orderBy = "desc";
+        
+        if (minPrice.HasValue && maxPrice.HasValue && minPrice > maxPrice)
+        {
+            ModelState.AddModelError("Price", "minPrice не может быть больше maxPrice");
+            return BadRequest(ModelState);
+        }
+        
+        var maxDbPrice = await db.Listings.MaxAsync(p => p.Price);
+
+        if (maxPrice.HasValue && maxPrice > maxDbPrice)
+            maxPrice = maxDbPrice;
         
         var address = userIdentity.GetAddressByCookie(HttpContext);
         var cutoff = DateTime.UtcNow.AddDays(-7);
@@ -103,6 +116,12 @@ public class MarketController(
             var pattern = $"%{term}%";
             query = query.Where(l => EF.Functions.ILike(l.NftMetadata.Name, pattern));
         }
+        
+        if (minPrice.HasValue)
+            query = query.Where(p => p.Price >= minPrice.Value);
+
+        if (maxPrice.HasValue)
+            query = query.Where(p => p.Price <= maxPrice.Value);
 
         var listings = await query
             .Skip((page - 1) * pageSize)
