@@ -120,7 +120,7 @@ public class RecordChanges : BackgroundService
                                     break;
 
                                 var mtData = await _magicEdenProvider
-                                    .GetListingMetadataAsync([e.NftContract], [e.TokenId], true);
+                                    .GetListingMetadataAsync([e.NftContract], [e.TokenId]);
                                 
                                 var key = MakeKey(e.NftContract, e.TokenId);
 
@@ -147,7 +147,7 @@ public class RecordChanges : BackgroundService
                                         Name = meta.Name,
                                         ImageOriginal = meta.ImageOriginal,
                                         Description = meta.Description,
-                                        LastPrice = meta.Price ?? 0m,
+                                        Price = meta.Price ?? 0m,
                                         LastUpdated = DateTime.UtcNow
                                     }
                                 };
@@ -161,9 +161,12 @@ public class RecordChanges : BackgroundService
                                         Timestamp = pe.BlockTimestamp,
                                         TransactionHash = pe.TransactionHash
                                     },
-                                    UserAddress = await _monadService.GetTransactionInitiator(pe.TransactionHash),
+                                    FromAddress = await _monadService.GetTransactionInitiator(pe.TransactionHash),
+                                    ToAddress = string.Empty,
                                     ListingId = e.Id,
                                     TradeId = null,
+                                    Listing = lst,
+                                    Trade = null,
                                     Status = lst.Status,
                                     CreatedAt = DateTime.UtcNow
                                 };
@@ -215,9 +218,12 @@ public class RecordChanges : BackgroundService
                                         Timestamp = pe.BlockTimestamp,
                                         TransactionHash = pe.TransactionHash
                                     },
-                                    UserAddress = await _monadService.GetTransactionInitiator(pe.TransactionHash),
+                                    FromAddress = await _monadService.GetTransactionInitiator(pe.TransactionHash),
+                                    ToAddress = string.Empty,
                                     ListingId = lst.ListingId,
                                     TradeId = null,
+                                    Listing = lst,
+                                    Trade = null,
                                     Status = lst.Status,
                                     CreatedAt = DateTime.UtcNow
                                 };
@@ -254,9 +260,12 @@ public class RecordChanges : BackgroundService
                                         Timestamp = pe.BlockTimestamp,
                                         TransactionHash = pe.TransactionHash
                                     },
-                                    UserAddress = lst.SellerAddress,
+                                    FromAddress = lst.SellerAddress,
+                                    ToAddress = lst.BuyerAddress,
                                     ListingId = lst.ListingId,
                                     TradeId = null,
+                                    Listing = lst,
+                                    Trade = null,
                                     Status = lst.Status,
                                     CreatedAt = DateTime.UtcNow
                                 };
@@ -270,9 +279,12 @@ public class RecordChanges : BackgroundService
                                         Timestamp = pe.BlockTimestamp,
                                         TransactionHash = pe.TransactionHash
                                     },
-                                    UserAddress = lst.BuyerAddress,
+                                    FromAddress = lst.BuyerAddress,
+                                    ToAddress = lst.SellerAddress,
                                     ListingId = lst.ListingId,
                                     TradeId = null,
+                                    Listing = lst,
+                                    Trade = null,
                                     Status = EventStatus.ListingBought,
                                     CreatedAt = DateTime.UtcNow
                                 };
@@ -311,6 +323,10 @@ public class RecordChanges : BackgroundService
                             if(tradeData.To.User.Equals(AddressUtil.ZERO_ADDRESS) ||
                                tradeData.From.User.Equals(AddressUtil.ZERO_ADDRESS))
                                 break;
+
+                            var listings = await db.Listings
+                                .Where(l => e.ListingIds.Contains(l.ListingId))
+                                .ToListAsync(cancellationToken: stoppingToken);
                             
                             var trade = new Trade
                             {
@@ -328,7 +344,8 @@ public class RecordChanges : BackgroundService
                                     TokenIds = tradeData.To.TokenIds,
                                     NftContracts = tradeData.To.NftContracts
                                 },
-                                Status = EventStatus.TradeCreated
+                                Status = EventStatus.TradeCreated,
+                                Listings = listings
                             };
                             
                             var historyFrom = new History
@@ -340,8 +357,11 @@ public class RecordChanges : BackgroundService
                                     Timestamp = pe.BlockTimestamp,
                                     TransactionHash = pe.TransactionHash
                                 },
-                                UserAddress = trade.From.Address,
+                                FromAddress = trade.From.Address,
+                                ToAddress = trade.To.Address,
                                 ListingId = null,
+                                Listing = null,
+                                Trade = trade, 
                                 TradeId = trade.TradeId,
                                 Status = trade.Status,
                                 CreatedAt = DateTime.UtcNow
@@ -356,9 +376,12 @@ public class RecordChanges : BackgroundService
                                     Timestamp = pe.BlockTimestamp,
                                     TransactionHash = pe.TransactionHash
                                 },
-                                UserAddress = trade.To.Address,
+                                FromAddress = trade.To.Address,
+                                ToAddress = trade.From.Address,
                                 ListingId = null,
                                 TradeId = trade.TradeId,
+                                Listing = null,
+                                Trade = trade, 
                                 Status = EventStatus.TradeReceived,
                                 CreatedAt = DateTime.UtcNow
                             };
@@ -451,7 +474,9 @@ public class RecordChanges : BackgroundService
         ParsedEvent pe,
         CancellationToken stoppingToken)
     {
-        var trade = await db.Trades.FirstOrDefaultAsync(t => t.TradeId == tradeId,
+        var trade = await db.Trades
+            .Include(t => t.Listings)
+            .FirstOrDefaultAsync(t => t.TradeId == tradeId,
             cancellationToken: stoppingToken);
 
         if (trade is null) return;
@@ -462,7 +487,8 @@ public class RecordChanges : BackgroundService
         {
             new()
             {
-                UserAddress = trade.From.Address,
+                FromAddress = trade.From.Address,
+                ToAddress = trade.To.Address,
                 EventMetadata = new()
                 {
                     BlockNumber = pe.BlockNumber,
@@ -472,12 +498,15 @@ public class RecordChanges : BackgroundService
                 },
                 ListingId = null,
                 TradeId = tradeId,
+                Listing = null,
+                Trade = trade,
                 Status = status,
                 CreatedAt = DateTime.UtcNow
             },
             new()
             {
-                UserAddress = trade.To.Address,
+                FromAddress = trade.To.Address,
+                ToAddress = trade.From.Address,
                 EventMetadata = new()
                 {
                     BlockNumber = pe.BlockNumber,
@@ -487,6 +516,8 @@ public class RecordChanges : BackgroundService
                 },
                 ListingId = null,
                 TradeId = tradeId,
+                Listing = null,
+                Trade = trade,
                 Status = status,
                 CreatedAt = DateTime.UtcNow
             }

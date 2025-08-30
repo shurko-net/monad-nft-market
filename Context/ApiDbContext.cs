@@ -96,14 +96,42 @@ public class ApiDbContext(DbContextOptions<ApiDbContext> options) : DbContext(op
                 .HasConversion(bigIntListConverter)
                 .Metadata.SetValueComparer(bigIntListComparer);
         });
-        
-        modelBuilder.Entity<Listing>()
-            .HasIndex(l => l.ListingId)
-            .IsUnique();
-        
-        modelBuilder.Entity<Trade>()
-            .HasIndex(l => l.TradeId)
-            .IsUnique();
+
+        modelBuilder.Entity<Listing>(e =>
+        {
+            e.HasKey(l => l.Id);
+            e.HasAlternateKey(l => l.ListingId);
+            e.HasIndex(l => l.ListingId).IsUnique();
+        });
+
+        modelBuilder.Entity<Trade>(e =>
+        {
+            e.HasKey(t => t.Id);
+            e.HasAlternateKey(t => t.TradeId);
+            e.HasIndex(t => t.TradeId).IsUnique();
+        });
+
+        modelBuilder.Entity<History>(e =>
+        {
+            e.HasKey(h => h.Id);
+
+            e.HasOne(h => h.Listing)
+                .WithMany()
+                .HasForeignKey(h => h.ListingId)
+                .HasPrincipalKey(h => h.ListingId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .IsRequired(false);
+
+            e.HasOne(h => h.Trade)
+                .WithMany()
+                .HasForeignKey(h => h.TradeId)
+                .HasPrincipalKey(h => h.TradeId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .IsRequired(false);
+
+            e.HasIndex(h => h.ListingId);
+            e.HasIndex(h => h.TradeId);
+        });
 
         modelBuilder.Entity<Listing>()
             .Property(l => l.Status)
@@ -125,7 +153,10 @@ public class ApiDbContext(DbContextOptions<ApiDbContext> options) : DbContext(op
             .HasIndex(l => new { l.Status, l.ListingId });
         
         modelBuilder.Entity<History>()
-            .HasIndex(h => new { h.UserAddress, h.Status });
+            .HasIndex(h => new { h.FromAddress, h.Status });
+        
+        modelBuilder.Entity<History>()
+            .HasIndex(h => new { h.FromAddress, h.ToAddress, h.Status });
 
         modelBuilder.Entity<Trade>()
             .HasIndex(l => new { l.Status, l.TradeId });

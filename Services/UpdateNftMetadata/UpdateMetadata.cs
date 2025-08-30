@@ -20,11 +20,10 @@ public class UpdateMetadata : IUpdateMetadata
     
     public async Task UpdateMetadataAsync(
         List<string> contractAddresses,
-        List<BigInteger> tokenIds,
-        bool sortByDesc)
+        List<BigInteger> tokenIds)
     {
         var metadata = await _magicEdenProvider
-            .GetListingMetadataAsync(contractAddresses, tokenIds, sortByDesc);
+            .GetListingMetadataAsync(contractAddresses, tokenIds);
 
         foreach (var data in contractAddresses.Zip(tokenIds))
         {
@@ -41,7 +40,7 @@ public class UpdateMetadata : IUpdateMetadata
                     .SetProperty(n => n.NftMetadata.Name, _ => mt.Name)
                     .SetProperty(n => n.NftMetadata.ImageOriginal, _ => mt.ImageOriginal)
                     .SetProperty(n => n.NftMetadata.Description, _ => mt.Description)
-                    .SetProperty(n => n.NftMetadata.LastPrice, _ => mt.Price ?? 0m)
+                    .SetProperty(n => n.NftMetadata.Price, _ => mt.Price ?? 0m)
                     .SetProperty(n => n.NftMetadata.LastUpdated, _ => DateTime.UtcNow));
         }
     }

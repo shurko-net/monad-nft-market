@@ -19,7 +19,7 @@ public class NftMetadata
     [MaxLength(50)] public string Name { get; set; } = string.Empty;
     [DataType(DataType.Text)] public string ImageOriginal { get; set; } = string.Empty;
     [DataType(DataType.Text)] public string Description { get; set; } = string.Empty;
-    public decimal? LastPrice { get; set; }
+    public decimal? Price { get; set; }
     public DateTime LastUpdated { get; set; }
     
     private readonly string _nftContractAddress = string.Empty;

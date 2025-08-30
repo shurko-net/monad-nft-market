@@ -4,5 +4,5 @@ namespace MonadNftMarket.Services.UpdateNftMetadata;
 
 public interface IUpdateMetadata
 {
-    Task UpdateMetadataAsync(List<string> contractAddresses, List<BigInteger> tokenIds, bool sortByDesc);
+    Task UpdateMetadataAsync(List<string> contractAddresses, List<BigInteger> tokenIds);
 }

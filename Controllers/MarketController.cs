@@ -51,8 +51,13 @@ public class MarketController(
         [FromQuery] int pageSize = 10,
         [FromQuery] bool excludeSelf = false,
         [FromQuery] string? seller = null,
-        [FromQuery] bool sortByDesc = true)
+        [FromQuery] string sortBy = "ListingId",
+        [FromQuery] string orderBy = "desc")
     {
+        var allowedOrders = new[] { "asc", "desc" };
+        if (!allowedOrders.Contains(orderBy, StringComparer.OrdinalIgnoreCase))
+            orderBy = "desc";
+        
         var address = userIdentity.GetAddressByCookie(HttpContext);
         var cutoff = DateTime.UtcNow.AddDays(-7);
         if (string.IsNullOrEmpty(address))
@@ -70,10 +75,22 @@ public class MarketController(
         
         if(!string.IsNullOrEmpty(seller))
             query = query.Where(l => EF.Functions.ILike(l.SellerAddress, seller));
-        
-        query = sortByDesc ? 
-            query.OrderByDescending(l => l.Id) :
-            query.OrderBy(l => l.Id);
+
+        query = sortBy.ToLowerInvariant() switch
+        {
+            "listingid" => orderBy == "desc"
+                ? query.OrderByDescending(l => l.ListingId)
+                : query.OrderBy(l => l.ListingId),
+            "contractaddress" => orderBy == "desc"
+                ? query.OrderByDescending(l => l.NftContractAddress)
+                : query.OrderBy(l => l.NftContractAddress),
+            "tokenid" => orderBy == "desc" ? query.OrderByDescending(l => l.TokenId) : query.OrderBy(l => l.TokenId),
+            "selleraddress" => orderBy == "desc"
+                ? query.OrderByDescending(l => l.SellerAddress)
+                : query.OrderBy(l => l.SellerAddress),
+            "price" => orderBy == "desc" ? query.OrderByDescending(l => l.Price) : query.OrderBy(l => l.Price),
+            _ => orderBy == "desc" ? query.OrderByDescending(l => l.ListingId) : query.OrderBy(l => l.ListingId)
+        };
 
         var listings = await query
             .Skip((page - 1) * pageSize)
@@ -91,7 +108,7 @@ public class MarketController(
                     Name = l.NftMetadata.Name,
                     ImageOriginal = l.NftMetadata.ImageOriginal,
                     Description = l.NftMetadata.Description,
-                    Price = l.NftMetadata.LastPrice
+                    Price = l.NftMetadata.Price
                 },
                 IsOwnedByCurrentUser = l.SellerAddress == address,
                 Status = l.Status,
@@ -111,7 +128,7 @@ public class MarketController(
         if(outdatedPairs.Count > 0)
             await updateMetadata.UpdateMetadataAsync(
                 outdatedPairs.Select(o => o.ContractAddress).ToList()!,
-                outdatedPairs.Select(o => o.TokenId).ToList(), sortByDesc);
+                outdatedPairs.Select(o => o.TokenId).ToList());
         
         return Ok(listings);
     }
@@ -186,7 +203,7 @@ public class MarketController(
         {
             var fromMeta = await magicEdenProvider
                 .GetListingMetadataAsync(trade.From.NftContracts.ToList(),
-                    trade.From.TokenIds.ToList(), true);
+                    trade.From.TokenIds.ToList());
             tradeMetadataByTradeId.TryGetValue(trade.TradeId, out var toMeta);
             
             result.Add(new TradeResponse
@@ -221,16 +238,29 @@ public class MarketController(
         pageSize = Math.Max(1, pageSize);
 
         var address = userIdentity.GetAddressByCookie(HttpContext);
-
+        
         var history = await db.History
             .AsNoTracking()
-            .Where(h => h.UserAddress == address)
+            .Where(h => h.FromAddress == address)
             .Select(h => new HistoryDto
             {
-                UserAddress = h.UserAddress,
-                Status = h.Status,
+                UserAddress = h.FromAddress,
+                Status = (h.Status == EventStatus.ListingBought
+                          || h.Status == EventStatus.ListingSold
+                          || h.Status == EventStatus.TradeAccepted
+                          || h.Status == EventStatus.TradeCompleted)
+                    ? HistoryStatus.Success
+                    : (h.Status == EventStatus.TradeCreated
+                    || h.Status == EventStatus.TradeReceived)
+                    ? HistoryStatus.Pending
+                    : (h.Status == EventStatus.ListingRemoved
+                    || h.Status == EventStatus.TradeRejected)
+                    ? HistoryStatus.Reject
+                    : HistoryStatus.Unknown,
                 ListingId = h.ListingId,
                 TradeId = h.TradeId,
+                Trade = h.Trade,
+                Listings = h.Listing,
                 Metadata = h.EventMetadata
             })
             .Skip((page - 1) * pageSize)

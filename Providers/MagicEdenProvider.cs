@@ -44,8 +44,7 @@ public class MagicEdenProvider : IMagicEdenProvider
     }
     private string BuildTokensMetadataUrl(
         List<string> contracts,
-        List<BigInteger> ids,
-        bool sortByDesc)
+        List<BigInteger> ids)
     {
         if(contracts.Count == 0 || ids.Count == 0)
             return string.Empty;
@@ -55,13 +54,7 @@ public class MagicEdenProvider : IMagicEdenProvider
         
         var qsParts = zip.Select(t => "tokens=" + Uri.EscapeDataString(t));
 
-        var url = _tokensMetadataUrl + "?" + string.Join("&", qsParts);
-        var query = new Dictionary<string, string?>
-        {
-            ["sortDirection"] = sortByDesc ? "desc" : "asc"
-        };
-        
-        return QueryHelpers.AddQueryString(url, query);
+        return _tokensMetadataUrl + "?" + string.Join("&", qsParts);
     }
     private async Task<List<JsonDocument>> GetAllPagesAsync(string baseUrl)
     {
@@ -192,13 +185,12 @@ public class MagicEdenProvider : IMagicEdenProvider
 
     public async Task<IReadOnlyDictionary<string, Metadata>> GetListingMetadataAsync(
         List<string> contracts,
-        List<BigInteger> ids,
-        bool sortByDesc)
+        List<BigInteger> ids)
     {
         if (contracts.Count == 0 || ids.Count == 0)
             return new Dictionary<string, Metadata>(StringComparer.OrdinalIgnoreCase);
         
-        var url = BuildTokensMetadataUrl(contracts, ids, sortByDesc);
+        var url = BuildTokensMetadataUrl(contracts, ids);
         if(string.IsNullOrEmpty(url))
             return new Dictionary<string, Metadata>(StringComparer.OrdinalIgnoreCase);
         

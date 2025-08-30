@@ -35,29 +35,44 @@ namespace MonadNftMarket.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<BigInteger?>("ListingId")
-                        .HasColumnType("numeric")
+                    b.Property<string>("FromAddress")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("from_address");
+
+                    b.Property<string>("ListingId")
+                        .HasColumnType("text")
                         .HasColumnName("listing_id");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer")
                         .HasColumnName("status");
 
-                    b.Property<BigInteger?>("TradeId")
-                        .HasColumnType("numeric")
-                        .HasColumnName("trade_id");
-
-                    b.Property<string>("UserAddress")
+                    b.Property<string>("ToAddress")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
-                        .HasColumnName("user_address");
+                        .HasColumnName("to_address");
+
+                    b.Property<string>("TradeId")
+                        .HasColumnType("text")
+                        .HasColumnName("trade_id");
 
                     b.HasKey("Id")
                         .HasName("pk_history");
 
-                    b.HasIndex("UserAddress", "Status")
-                        .HasDatabaseName("ix_history_user_address_status");
+                    b.HasIndex("ListingId")
+                        .HasDatabaseName("ix_history_listing_id");
+
+                    b.HasIndex("TradeId")
+                        .HasDatabaseName("ix_history_trade_id");
+
+                    b.HasIndex("FromAddress", "Status")
+                        .HasDatabaseName("ix_history_from_address_status");
+
+                    b.HasIndex("FromAddress", "ToAddress", "Status")
+                        .HasDatabaseName("ix_history_from_address_to_address_status");
 
                     b.ToTable("history", (string)null);
                 });
@@ -136,12 +151,22 @@ namespace MonadNftMarket.Migrations
                         .HasColumnType("text")
                         .HasColumnName("token_id");
 
+                    b.Property<Guid?>("TradeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trade_id");
+
                     b.HasKey("Id")
                         .HasName("pk_listings");
+
+                    b.HasAlternateKey("ListingId")
+                        .HasName("ak_listings_listing_id");
 
                     b.HasIndex("ListingId")
                         .IsUnique()
                         .HasDatabaseName("ix_listings_listing_id");
+
+                    b.HasIndex("TradeId")
+                        .HasDatabaseName("ix_listings_trade_id");
 
                     b.HasIndex("Status", "ListingId")
                         .HasDatabaseName("ix_listings_status_listing_id");
@@ -216,6 +241,9 @@ namespace MonadNftMarket.Migrations
                     b.HasKey("Id")
                         .HasName("pk_trades");
 
+                    b.HasAlternateKey("TradeId")
+                        .HasName("ak_trades_trade_id");
+
                     b.HasIndex("TradeId")
                         .IsUnique()
                         .HasDatabaseName("ix_trades_trade_id");
@@ -228,6 +256,20 @@ namespace MonadNftMarket.Migrations
 
             modelBuilder.Entity("MonadNftMarket.Models.History", b =>
                 {
+                    b.HasOne("MonadNftMarket.Models.Listing", "Listing")
+                        .WithMany()
+                        .HasForeignKey("ListingId")
+                        .HasPrincipalKey("ListingId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_history_listings_listing_id");
+
+                    b.HasOne("MonadNftMarket.Models.Trade", "Trade")
+                        .WithMany()
+                        .HasForeignKey("TradeId")
+                        .HasPrincipalKey("TradeId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_history_trades_trade_id");
+
                     b.OwnsOne("MonadNftMarket.Models.EventMetadata", "EventMetadata", b1 =>
                         {
                             b1.Property<Guid>("HistoryId")
@@ -266,10 +308,19 @@ namespace MonadNftMarket.Migrations
 
                     b.Navigation("EventMetadata")
                         .IsRequired();
+
+                    b.Navigation("Listing");
+
+                    b.Navigation("Trade");
                 });
 
             modelBuilder.Entity("MonadNftMarket.Models.Listing", b =>
                 {
+                    b.HasOne("MonadNftMarket.Models.Trade", null)
+                        .WithMany("Listings")
+                        .HasForeignKey("TradeId")
+                        .HasConstraintName("fk_listings_trades_trade_id");
+
                     b.OwnsOne("MonadNftMarket.Models.NftMetadata", "NftMetadata", b1 =>
                         {
                             b1.Property<Guid>("ListingId")
@@ -296,10 +347,6 @@ namespace MonadNftMarket.Migrations
                                 .HasColumnType("character varying(50)")
                                 .HasColumnName("nft_metadata_kind");
 
-                            b1.Property<decimal?>("LastPrice")
-                                .HasColumnType("numeric")
-                                .HasColumnName("nft_metadata_last_price");
-
                             b1.Property<DateTime>("LastUpdated")
                                 .HasColumnType("timestamp with time zone")
                                 .HasColumnName("nft_metadata_last_updated");
@@ -315,6 +362,10 @@ namespace MonadNftMarket.Migrations
                                 .HasMaxLength(50)
                                 .HasColumnType("character varying(50)")
                                 .HasColumnName("nft_metadata_nft_contract_address");
+
+                            b1.Property<decimal?>("Price")
+                                .HasColumnType("numeric")
+                                .HasColumnName("nft_metadata_price");
 
                             b1.Property<BigInteger>("TokenId")
                                 .HasColumnType("numeric")
@@ -402,6 +453,11 @@ namespace MonadNftMarket.Migrations
 
                     b.Navigation("To")
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("MonadNftMarket.Models.Trade", b =>
+                {
+                    b.Navigation("Listings");
                 });
 #pragma warning restore 612, 618
         }
