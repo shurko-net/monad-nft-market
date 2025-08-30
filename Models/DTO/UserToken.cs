@@ -8,5 +8,5 @@ public class UserToken
     public string Name { get; set; } = string.Empty;
     public string ImageOriginal { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public decimal? LastPrice { get; set; }
+    public decimal? Price { get; set; }
 }

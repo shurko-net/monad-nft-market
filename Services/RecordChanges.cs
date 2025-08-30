@@ -147,7 +147,7 @@ public class RecordChanges : BackgroundService
                                         Name = meta.Name,
                                         ImageOriginal = meta.ImageOriginal,
                                         Description = meta.Description,
-                                        LastPrice = meta.LastPrice ?? 0m,
+                                        LastPrice = meta.Price ?? 0m,
                                         LastUpdated = DateTime.UtcNow
                                     }
                                 };

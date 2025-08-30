@@ -152,7 +152,7 @@ public class MagicEdenProvider : IMagicEdenProvider
                                 ?? t.Image
                                 ?? string.Empty,
                 Description = t.Description ?? string.Empty,
-                LastPrice = t.Collection?.FloorAskPrice?.Amount?.Native ?? 0m
+                Price = t.Collection?.FloorAskPrice?.Amount?.Native ?? 0m
             };
         }).ToList();
     }
@@ -252,7 +252,7 @@ public class MagicEdenProvider : IMagicEdenProvider
                     Name = t.Name,
                     ImageOriginal = t.ImageOriginal,
                     Description = t.Description,
-                    LastPrice = t.LastPrice
+                    Price = t.Price
                 };
             }
         }

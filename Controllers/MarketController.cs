@@ -20,7 +20,7 @@ public class MarketController(
 {
     [Authorize]
     [HttpGet("user-tokens")]
-    public async Task<IActionResult> GetUserTokens(int page, int pageSize = 20)
+    public async Task<IActionResult> GetUserTokens(int page = 1, int pageSize = 20)
     {
         var address = userIdentity.GetAddressByCookie(HttpContext);
 
@@ -37,16 +37,18 @@ public class MarketController(
         return Ok(new
         {
             response,
-            TotalValue = userTokens.Sum(t => t.LastPrice ?? 0m),
+            TotalValue = userTokens.Sum(t => t.Price ?? 0m),
             NftAmount = userTokens.Count
         });
     }
 
     [HttpGet("market-listing")]
     public async Task<IActionResult> GetMarketListing(
-        [FromQuery] int page,
+        [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
-        [FromQuery] bool excludeSelf = false)
+        [FromQuery] bool excludeSelf = false,
+        [FromQuery] string? seller = null,
+        [FromQuery] bool sortByDesc = true)
     {
         var address = userIdentity.GetAddressByCookie(HttpContext);
         var cutoff = DateTime.UtcNow.AddDays(-7);
@@ -62,9 +64,15 @@ public class MarketController(
 
         if (excludeSelf)
             query = query.Where(l => l.SellerAddress != address);
+        
+        if(!string.IsNullOrEmpty(seller))
+            query = query.Where(l => EF.Functions.ILike(l.SellerAddress, seller));
+        
+        query = sortByDesc ? 
+            query.OrderByDescending(l => l.Id) :
+            query.OrderBy(l => l.Id);
 
         var listings = await query
-            .OrderByDescending(l => l.ListingId)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(l => new ListingResponse
@@ -80,7 +88,7 @@ public class MarketController(
                     Name = l.NftMetadata.Name,
                     ImageOriginal = l.NftMetadata.ImageOriginal,
                     Description = l.NftMetadata.Description,
-                    LastPrice = l.NftMetadata.LastPrice
+                    Price = l.NftMetadata.LastPrice
                 },
                 IsOwnedByCurrentUser = l.SellerAddress == address,
                 Status = l.Status,
@@ -189,7 +197,7 @@ public class MarketController(
                         Kind = m.Kind,
                         Description = m.Description,
                         ImageOriginal = m.ImageOriginal,
-                        Price = m.LastPrice ?? 0m
+                        Price = m.Price ?? 0m
                     }),
                 ToMetadata = toMeta!,
                 IsIncoming = trade.To.Address == address,
