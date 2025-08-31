@@ -273,7 +273,9 @@ public class MarketController(
         
         var history = await db.History
             .AsNoTracking()
-            .Where(h => h.FromAddress == address)
+            .Where(h => h.FromAddress == address &&
+                        h.Status != EventStatus.TradeCompleted && h.Status != EventStatus.ListingRemoved
+                        && h.Status != EventStatus.ListingCreated)
             .Select(h => new HistoryDto
             {
                 UserAddress = h.FromAddress,
@@ -298,7 +300,15 @@ public class MarketController(
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
-        
-        return Ok(history);
+
+        var totalItems = await db.History.CountAsync(h => h.FromAddress == address &&
+                                                          h.Status != EventStatus.TradeCompleted &&
+                                                          h.Status != EventStatus.ListingRemoved
+                                                          && h.Status != EventStatus.ListingCreated);
+        return Ok(new
+        {
+            history,
+            totalPages = Math.Ceiling(totalItems / (double)pageSize)
+        });
     }
 }
