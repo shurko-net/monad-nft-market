@@ -2,10 +2,13 @@ using MonadNftMarket.Services.Token;
 using MonadNftMarket.Providers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using MonadNftMarket.Context;
 using MonadNftMarket.Models;
 using MonadNftMarket.Models.DTO;
+using MonadNftMarket.Models.EndpointsCursors;
+using MonadNftMarket.Services;
 using MonadNftMarket.Services.UpdateNftMetadata;
 
 namespace MonadNftMarket.Controllers;
@@ -167,27 +170,39 @@ public class MarketController(
     [Authorize]
     [HttpGet("trades")]
     public async Task<IActionResult> GetTrades(
-        [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
+        [FromQuery] string? nextCursor = null,
         [FromQuery] string direction = "all")
     {
-        if (!Enum.TryParse<TradeDirection>(direction, true, out var dir))
-            return Ok(Array.Empty<TradeResponse>());
-
-        page = Math.Max(1, page);
+        Enum.TryParse<TradeDirection>(direction, true, out var dir);
+        
         pageSize = Math.Max(1, pageSize);
 
         var address = userIdentity.GetAddressByCookie(HttpContext);
         
         var baseQuery = db.Trades
             .AsNoTracking()
+            .AsSplitQuery()
+            .OrderByDescending(t => t.Id)
             .Where(t => t.Status == EventStatus.TradeCreated)
             .Include(t => t.From)
             .Include(t => t.To)
-            .AsSplitQuery()
-            .OrderByDescending(t => t.TradeId)
             .AsQueryable();
 
+        if (!string.IsNullOrEmpty(nextCursor))
+        {
+            var data = CursorService.Decode<TradeCursor>(nextCursor);
+
+            if (data != null)
+            {
+                baseQuery = baseQuery.Where(t => t.Id < data.LastId);
+
+                Console.WriteLine($"Dir from query: {dir}");
+                dir = data.Direction;
+                Console.WriteLine($"Dir from data: {data.Direction}");
+            }
+        }
+        
         baseQuery = dir switch
         {
             TradeDirection.All => baseQuery.Where(t => t.From.Address == address || t.To.Address == address),
@@ -196,10 +211,12 @@ public class MarketController(
             _ => baseQuery
         };
 
-        var trades = await baseQuery
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
+        var fetched = await baseQuery
+            .Take(pageSize + 1)
             .ToListAsync();
+        
+        var hasMore = fetched.Count > pageSize;
+        var trades = fetched.Take(pageSize).ToList();
 
         if (trades.Count == 0)
             return Ok(Array.Empty<TradeResponse>());
@@ -257,7 +274,19 @@ public class MarketController(
             });
         }
         
-        return Ok(result);
+        return Ok(new PagedResult<TradeResponse>
+        {
+            Items = result,
+            HasMore = hasMore,
+            NextCursor = hasMore ? 
+                CursorService.Encode(new TradeCursor
+                {
+                    LastId = trades[^1].Id,
+                    Direction = dir
+                })
+                :
+                null
+        });
     }
 
     [Authorize]
