@@ -2,4 +2,4 @@
 
 namespace MonadNftMarket.Models.EndpointsCursors;
 
-public record TradeCursor(Guid LastId, TradeDirection Direction);
+public record UserTokenCursor(DateTime AcquiredAt, OrderDirection OrderBy);

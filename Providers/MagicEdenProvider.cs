@@ -152,7 +152,8 @@ public class MagicEdenProvider : IMagicEdenProvider
                                 ?? t.Image
                                 ?? string.Empty,
                 Description = t.Description ?? string.Empty,
-                Price = t.Collection?.FloorAskPrice?.Amount?.Native ?? 0m
+                Price = t.Collection?.FloorAskPrice?.Amount?.Native ?? 0m,
+                AcquiredAt = x.Ownership.AcquiredAt
             };
         }).ToList();
     }

@@ -4,6 +4,7 @@ namespace MonadNftMarket.Models.DTO;
 
 public class HistoryDto
 {
+    public required Guid HistoryId { get; set; }
     public required string UserAddress { get; set; }
     public required HistoryStatus Status { get; set; }
     public required EventMetadata Metadata { get; set; }

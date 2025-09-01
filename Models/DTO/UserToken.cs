@@ -9,4 +9,5 @@ public class UserToken
     public string ImageOriginal { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public decimal? Price { get; set; }
+    public DateTime AcquiredAt { get; set; }
 }

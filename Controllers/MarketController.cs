@@ -2,7 +2,6 @@ using MonadNftMarket.Services.Token;
 using MonadNftMarket.Providers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using MonadNftMarket.Context;
 using MonadNftMarket.Models;
@@ -24,27 +23,55 @@ public class MarketController(
     [Authorize]
     [HttpGet("user-tokens")]
     public async Task<IActionResult> GetUserTokens(
-        [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
-        [FromQuery] bool sortByDesc = true)
+        [FromQuery] string? nextCursor = null,
+        [FromQuery] string orderBy = "desc")
     {
-        var address = userIdentity.GetAddressByCookie(HttpContext);
-
-        var userTokens = await magicEdenProvider.GetUserTokensAsync(address, sortByDesc);
-
-        page = Math.Max(1, page);
         pageSize = Math.Max(1, pageSize);
-
-        var response = userTokens
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
-
-        return Ok(new
+        var address = userIdentity.GetAddressByCookie(HttpContext);
+        
+        Enum.TryParse<OrderDirection>(orderBy, true, out var dir);
+        
+        IEnumerable<UserToken> userTokens = [];
+        
+        if (!string.IsNullOrEmpty(nextCursor))
         {
-            response,
-            TotalValue = userTokens.Sum(t => t.Price ?? 0m),
-            NftAmount = userTokens.Count
+            var data = CursorService.Decode<UserTokenCursor>(nextCursor);
+
+            if (data != null)
+            {
+                dir = data.OrderBy;
+                userTokens = await magicEdenProvider.GetUserTokensAsync(address, dir == OrderDirection.Desc);
+                
+                userTokens = dir switch
+                {
+                    OrderDirection.Desc => userTokens.Where(u => u.AcquiredAt < data.AcquiredAt),
+                    OrderDirection.Asc => userTokens.Where(u => u.AcquiredAt > data.AcquiredAt),
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+            }
+        }
+        else
+        {
+            userTokens = await magicEdenProvider.GetUserTokensAsync(address, dir == OrderDirection.Desc);
+        }
+
+        var fetched = userTokens
+            .Take(pageSize + 1)
+            .ToList();
+        
+        var items = fetched.Take(pageSize).ToList();
+        var hasMore = fetched.Count > pageSize;
+
+        return Ok(new UserTokenResponse<UserToken>
+        {
+            Items = items,
+            HasMore = hasMore,
+            NextCursor = hasMore
+                ? CursorService.Encode(new UserTokenCursor(items[^1].AcquiredAt, dir))
+                : null,
+            TotalValue = userTokens.ToList().Sum(u => u.Price ?? 0m),
+            NftAmount = userTokens.ToList().Count
         });
     }
 
@@ -60,13 +87,11 @@ public class MarketController(
         [FromQuery] decimal? minPrice = null,
         [FromQuery] decimal? maxPrice = null)
     {
-        var allowedOrders = new[] { "asc", "desc" };
-        if (!allowedOrders.Contains(orderBy, StringComparer.OrdinalIgnoreCase))
-            orderBy = "desc";
+        Enum.TryParse<OrderDirection>(orderBy, true, out var dir);
         
         if (minPrice.HasValue && maxPrice.HasValue && minPrice > maxPrice)
         {
-            ModelState.AddModelError("Price", "minPrice не может быть больше maxPrice");
+            ModelState.AddModelError("Price", "minPrice can`t be greater maxPrice");
             return BadRequest(ModelState);
         }
         
@@ -95,19 +120,19 @@ public class MarketController(
 
         query = sortBy.ToLowerInvariant() switch
         {
-            "id" => orderBy == "desc"
+            "id" => dir == OrderDirection.Desc
                 ? query.OrderByDescending(l => l.Id)
                 : query.OrderBy(l => l.Id),
-            "contractaddress" => orderBy == "desc"
+            "contractaddress" => dir == OrderDirection.Desc
                 ? query.OrderByDescending(l => l.NftContractAddress)
                 : query.OrderBy(l => l.NftContractAddress),
             "tokenid" => orderBy == "desc" ? query.OrderByDescending(l => l.TokenId) : query.OrderBy(l => l.TokenId),
-            "selleraddress" => orderBy == "desc"
+            "selleraddress" => dir == OrderDirection.Desc
                 ? query.OrderByDescending(l => l.SellerAddress)
                 : query.OrderBy(l => l.SellerAddress),
-            "price" => orderBy == "desc" ? query.OrderByDescending(l => l.Price) : query.OrderBy(l => l.Price),
-            "name" => orderBy == "desc" ? query.OrderByDescending(l => l.NftMetadata.Name) : query.OrderBy(l => l.NftMetadata.Name),
-            _ => orderBy == "desc" ? query.OrderByDescending(l => l.Id) : query.OrderBy(l => l.Id)
+            "price" => dir == OrderDirection.Desc ? query.OrderByDescending(l => l.Price) : query.OrderBy(l => l.Price),
+            "name" => dir == OrderDirection.Desc ? query.OrderByDescending(l => l.NftMetadata.Name) : query.OrderBy(l => l.NftMetadata.Name),
+            _ => dir == OrderDirection.Desc ? query.OrderByDescending(l => l.Id) : query.OrderBy(l => l.Id)
         };
 
         if (!string.IsNullOrEmpty(search))
@@ -196,10 +221,8 @@ public class MarketController(
             if (data != null)
             {
                 baseQuery = baseQuery.Where(t => t.Id < data.LastId);
-
-                Console.WriteLine($"Dir from query: {dir}");
+                
                 dir = data.Direction;
-                Console.WriteLine($"Dir from data: {data.Direction}");
             }
         }
         
@@ -279,11 +302,7 @@ public class MarketController(
             Items = result,
             HasMore = hasMore,
             NextCursor = hasMore ? 
-                CursorService.Encode(new TradeCursor
-                {
-                    LastId = trades[^1].Id,
-                    Direction = dir
-                })
+                CursorService.Encode(new TradeCursor(trades[^1].Id, dir))
                 :
                 null
         });
@@ -292,21 +311,35 @@ public class MarketController(
     [Authorize]
     [HttpGet("history")]
     public async Task<IActionResult> GetHistory(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 10)
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? nextCursor = null)
     {
-        page = Math.Max(1, page);
         pageSize = Math.Max(1, pageSize);
 
         var address = userIdentity.GetAddressByCookie(HttpContext);
-        
-        var history = await db.History
+
+        var historyQuery = db.History
             .AsNoTracking()
+            .OrderByDescending(h => h.Id)
+            .AsQueryable();
+        
+        if (!string.IsNullOrEmpty(nextCursor))
+        {
+            var data = CursorService.Decode<TradeCursor>(nextCursor);
+
+            if (data != null)
+            {
+                historyQuery = historyQuery.Where(t => t.Id < data.LastId);
+            }
+        }
+
+        var fetched = await historyQuery
             .Where(h => h.FromAddress == address &&
                         h.Status != EventStatus.TradeCompleted && h.Status != EventStatus.ListingRemoved
                         && h.Status != EventStatus.ListingCreated)
             .Select(h => new HistoryDto
             {
+                HistoryId = h.Id,
                 UserAddress = h.FromAddress,
                 Status = (h.Status == EventStatus.ListingBought
                           || h.Status == EventStatus.ListingSold
@@ -314,30 +347,38 @@ public class MarketController(
                           || h.Status == EventStatus.TradeCompleted)
                     ? HistoryStatus.Success
                     : (h.Status == EventStatus.TradeCreated
-                    || h.Status == EventStatus.TradeReceived)
-                    ? HistoryStatus.Pending
-                    : (h.Status == EventStatus.ListingRemoved
-                    || h.Status == EventStatus.TradeRejected)
-                    ? HistoryStatus.Reject
-                    : HistoryStatus.Unknown,
+                       || h.Status == EventStatus.TradeReceived)
+                        ? HistoryStatus.Pending
+                        : (h.Status == EventStatus.ListingRemoved
+                           || h.Status == EventStatus.TradeRejected)
+                            ? HistoryStatus.Reject
+                            : HistoryStatus.Unknown,
                 ListingId = h.ListingId,
                 TradeId = h.TradeId,
                 Trade = h.Trade,
                 Listings = h.Listing,
                 Metadata = h.EventMetadata
             })
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
+            .Take(pageSize + 1)
             .ToListAsync();
+        
 
         var totalItems = await db.History.CountAsync(h => h.FromAddress == address &&
                                                           h.Status != EventStatus.TradeCompleted &&
                                                           h.Status != EventStatus.ListingRemoved
                                                           && h.Status != EventStatus.ListingCreated);
-        return Ok(new
+        var hasMore = fetched.Count > pageSize;
+        var history = fetched.Take(pageSize).ToList();
+        
+        return Ok(new HistoryResponse<HistoryDto>
         {
-            history,
-            totalPages = Math.Ceiling(totalItems / (double)pageSize)
+            Items = history,
+            HasMore = hasMore,
+            NextCursor = hasMore ? 
+                CursorService.Encode(new HistoryCursor(history[^1].HistoryId))
+                :
+                null,
+            TotalPages = (totalItems + pageSize - 1) / pageSize
         });
     }
 }
