@@ -77,7 +77,6 @@ public class MarketController(
 
     [HttpGet("market-listing")]
     public async Task<IActionResult> GetMarketListing(
-        [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
         [FromQuery] bool excludeSelf = false,
         [FromQuery] string? seller = null,
@@ -85,15 +84,17 @@ public class MarketController(
         [FromQuery] string orderBy = "desc",
         [FromQuery] string? search = null,
         [FromQuery] decimal? minPrice = null,
-        [FromQuery] decimal? maxPrice = null)
+        [FromQuery] decimal? maxPrice = null,
+        [FromQuery] string? nextCursor = null)
     {
         Enum.TryParse<OrderDirection>(orderBy, true, out var dir);
         
-        if (minPrice.HasValue && maxPrice.HasValue && minPrice > maxPrice)
+        if (minPrice > maxPrice)
         {
             ModelState.AddModelError("Price", "minPrice can`t be greater maxPrice");
             return BadRequest(ModelState);
         }
+        pageSize = Math.Max(1, pageSize);
         
         var maxDbPrice = await db.Listings.MaxAsync(p => p.Price);
 
@@ -104,13 +105,11 @@ public class MarketController(
         var cutoff = DateTime.UtcNow.AddDays(-7);
         if (string.IsNullOrEmpty(address))
             excludeSelf = false;
-
-        page = Math.Max(1, page);
-        pageSize = Math.Max(1, pageSize);
         
         var query = db.Listings
             .AsNoTracking()
-            .Where(l => l.Status == EventStatus.ListingCreated);
+            .Where(l => l.Status == EventStatus.ListingCreated)
+            .AsQueryable();
 
         if (excludeSelf)
             query = query.Where(l => l.SellerAddress != address);
@@ -152,7 +151,6 @@ public class MarketController(
             query = query.Where(p => p.Price <= maxPrice.Value);
 
         var listings = await query
-            .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(l => new ListingResponse
             {
