@@ -428,10 +428,11 @@ public class MarketController(
     [Authorize]
     [HttpGet("history")]
     public async Task<IActionResult> GetHistory(
-        [FromQuery] int pageSize = 10,
-        [FromQuery] string? nextCursor = null)
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
     {
         pageSize = Math.Max(1, pageSize);
+        page = Math.Max(1, page);
 
         var address = userIdentity.GetAddressByCookie(HttpContext);
 
@@ -440,17 +441,7 @@ public class MarketController(
             .OrderByDescending(h => h.Id)
             .AsQueryable();
         
-        if (!string.IsNullOrEmpty(nextCursor))
-        {
-            var data = CursorService.Decode<TradeCursor>(nextCursor);
-
-            if (data != null)
-            {
-                historyQuery = historyQuery.Where(t => t.Id < data.LastId);
-            }
-        }
-
-        var fetched = await historyQuery
+        var history = await historyQuery
             .Where(h => h.FromAddress == address &&
                         h.Status != EventStatus.TradeCompleted && h.Status != EventStatus.ListingRemoved
                         && h.Status != EventStatus.ListingCreated)
@@ -476,27 +467,11 @@ public class MarketController(
                 Listings = h.Listing,
                 Metadata = h.EventMetadata
             })
-            .Take(pageSize + 1)
+            .Skip((page - 1) * pageSize)
+                .Take(pageSize)
             .ToListAsync();
         
-
-        var totalItems = await db.History.CountAsync(h => h.FromAddress == address &&
-                                                          h.Status != EventStatus.TradeCompleted &&
-                                                          h.Status != EventStatus.ListingRemoved
-                                                          && h.Status != EventStatus.ListingCreated);
-        var hasMore = fetched.Count > pageSize;
-        var history = fetched.Take(pageSize).ToList();
-        
-        return Ok(new HistoryResponse<HistoryDto>
-        {
-            Items = history,
-            HasMore = hasMore,
-            NextCursor = hasMore ? 
-                CursorService.Encode(new HistoryCursor(history[^1].HistoryId))
-                :
-                null,
-            TotalPages = (totalItems + pageSize - 1) / pageSize
-        });
+        return Ok(history);
     }
 
     private static string GetLastSortValue(ListingResponse listingResponse, string sortBy)
