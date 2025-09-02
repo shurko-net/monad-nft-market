@@ -471,7 +471,16 @@ public class MarketController(
                 .Take(pageSize)
             .ToListAsync();
         
-        return Ok(history);
+        var totalItems = await db.History.CountAsync(h => h.FromAddress == address &&
+                                                          h.Status != EventStatus.TradeCompleted &&
+                                                          h.Status != EventStatus.ListingRemoved
+                                                          && h.Status != EventStatus.ListingCreated);
+        
+        return Ok(new
+        {
+            history,
+            totalPage = (totalItems + pageSize - 1) / pageSize
+        });
     }
 
     private static string GetLastSortValue(ListingResponse listingResponse, string sortBy)
