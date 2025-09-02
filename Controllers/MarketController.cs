@@ -479,7 +479,7 @@ public class MarketController(
         return Ok(new
         {
             history,
-            totalPage = (totalItems + pageSize - 1) / pageSize
+            totalPages = (totalItems + pageSize - 1) / pageSize
         });
     }
 
