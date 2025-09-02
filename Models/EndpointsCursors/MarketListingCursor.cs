@@ -1,6 +1,8 @@
 ﻿namespace MonadNftMarket.Models.EndpointsCursors;
 
 public record MarketListingCursor(
+    Guid LastId,
+    string LastSortValue,
     bool ExcludeSelf,
     string? Seller = null,
     string SortBy = "id",

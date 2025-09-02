@@ -4,6 +4,7 @@ namespace MonadNftMarket.Models.DTO;
 
 public class ListingResponse
 {
+    public required Guid Id { get; set; }
     public BigInteger ListingId { get; set; }
     public string? ContractAddress { get; set; }
     public BigInteger TokenId { get; set; }

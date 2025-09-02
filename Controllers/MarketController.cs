@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Numerics;
 using MonadNftMarket.Services.Token;
 using MonadNftMarket.Providers;
 using Microsoft.AspNetCore.Mvc;
@@ -88,6 +90,128 @@ public class MarketController(
         [FromQuery] string? nextCursor = null)
     {
         Enum.TryParse<OrderDirection>(orderBy, true, out var dir);
+        MarketListingCursor? cursorData = null;
+        var query = db.Listings
+            .AsNoTracking()
+            .Where(l => l.Status == EventStatus.ListingCreated)
+            .AsQueryable();
+        
+        if (!string.IsNullOrEmpty(nextCursor))
+        {
+            cursorData = CursorService.Decode<MarketListingCursor>(nextCursor);
+
+            if (cursorData != null)
+            {
+                excludeSelf = cursorData.ExcludeSelf;
+                seller = cursorData.Seller;
+                sortBy = cursorData.SortBy;
+                orderBy = cursorData.OrderBy;
+                search = cursorData.Search;
+                minPrice = cursorData.MinPrice;
+                maxPrice = cursorData.MaxPrice;
+                
+                Enum.TryParse(orderBy, true, out dir);
+
+                switch (sortBy.ToLowerInvariant())
+                {
+                    case "id":
+                    {
+                        query = dir == OrderDirection.Desc
+                            ? query.OrderByDescending(l => l.Id)
+                                .Where(l => l.Id < cursorData.LastId)
+                            : query.OrderBy(l => l.Id)
+                                .Where(l => l.Id > cursorData.LastId);
+                        break;
+                    }
+                    case "contractaddress":
+                    {
+                        query = dir == OrderDirection.Desc
+                            ? query.OrderByDescending(l => l.NftContractAddress)
+                                .Where(l => l.NftContractAddress.CompareTo(cursorData.LastSortValue) < 0
+                                            || (l.NftContractAddress == cursorData.LastSortValue &&
+                                                l.Id < cursorData.LastId))
+                            : query.OrderBy(l => l.NftContractAddress)
+                                .Where(l => l.NftContractAddress.CompareTo(cursorData.LastSortValue) > 0
+                                            || (l.NftContractAddress == cursorData.LastSortValue &&
+                                                l.Id > cursorData.LastId));
+                        break;
+                    }
+                    case "tokenid":
+                    {
+                        if (!BigInteger.TryParse(cursorData.LastSortValue, out var lastTokenId))
+                            break;
+
+                        query = dir == OrderDirection.Desc
+                            ? query.OrderByDescending(l => l.TokenId)
+                                .Where(l => l.TokenId < lastTokenId ||
+                                            (l.TokenId == lastTokenId && l.Id < cursorData.LastId))
+                            : query.OrderBy(l => l.TokenId)
+                                .Where(l => l.TokenId > lastTokenId ||
+                                            (l.TokenId == lastTokenId && l.Id > cursorData.LastId));
+                        
+                        break;
+                    }
+                    case "selleraddress":
+                    {
+                        query = dir == OrderDirection.Desc
+                            ? query.OrderByDescending(l => l.SellerAddress)
+                                .Where(l => l.SellerAddress.CompareTo(cursorData.LastSortValue) < 0
+                                            || (l.SellerAddress == cursorData.LastSortValue &&
+                                                l.Id < cursorData.LastId))
+                            : query.OrderBy(l => l.SellerAddress)
+                                .Where(l => l.SellerAddress.CompareTo(cursorData.LastSortValue) > 0
+                                            || (l.SellerAddress == cursorData.LastSortValue &&
+                                                l.Id > cursorData.LastId));
+                        break;
+                    }
+                    case "price":
+                    {
+                        if(!decimal.TryParse(cursorData.LastSortValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var lastPrice))
+                            break;
+
+                        query = dir == OrderDirection.Desc
+                            ? query.OrderByDescending(l => l.Price)
+                                .Where(l => l.Price < lastPrice || (l.Price == lastPrice && l.Id < cursorData.LastId))
+                            : query.OrderBy(l => l.Price)
+                                .Where(l => l.Price > lastPrice || (l.Price == lastPrice && l.Id > cursorData.LastId));
+                        
+                        break;
+                    }
+                    case "name":
+                    {
+                        query = dir == OrderDirection.Desc
+                            ? query.OrderByDescending(l => l.NftMetadata.Name)
+                                .Where(l => l.NftMetadata.Name.CompareTo(cursorData.LastSortValue) < 0
+                                            || (l.NftMetadata.Name == cursorData.LastSortValue &&
+                                                l.Id < cursorData.LastId))
+                            : query.OrderBy(l => l.NftMetadata.Name)
+                                .Where(l => l.NftMetadata.Name.CompareTo(cursorData.LastSortValue) > 0
+                                            || (l.NftMetadata.Name == cursorData.LastSortValue &&
+                                                l.Id > cursorData.LastId));
+                        break;
+                    }
+                }
+            }
+        }
+        else
+        {
+            query = sortBy.ToLowerInvariant() switch
+            {
+                "id" => dir == OrderDirection.Desc
+                    ? query.OrderByDescending(l => l.Id)
+                    : query.OrderBy(l => l.Id),
+                "contractaddress" => dir == OrderDirection.Desc
+                    ? query.OrderByDescending(l => l.NftContractAddress)
+                    : query.OrderBy(l => l.NftContractAddress),
+                "tokenid" => orderBy == "desc" ? query.OrderByDescending(l => l.TokenId) : query.OrderBy(l => l.TokenId),
+                "selleraddress" => dir == OrderDirection.Desc
+                    ? query.OrderByDescending(l => l.SellerAddress)
+                    : query.OrderBy(l => l.SellerAddress),
+                "price" => dir == OrderDirection.Desc ? query.OrderByDescending(l => l.Price) : query.OrderBy(l => l.Price),
+                "name" => dir == OrderDirection.Desc ? query.OrderByDescending(l => l.NftMetadata.Name) : query.OrderBy(l => l.NftMetadata.Name),
+                _ => dir == OrderDirection.Desc ? query.OrderByDescending(l => l.Id) : query.OrderBy(l => l.Id)
+            };
+        }
         
         if (minPrice > maxPrice)
         {
@@ -98,41 +222,20 @@ public class MarketController(
         
         var maxDbPrice = await db.Listings.MaxAsync(p => p.Price);
 
-        if (maxPrice.HasValue && maxPrice > maxDbPrice)
+        if (maxPrice > maxDbPrice)
             maxPrice = maxDbPrice;
         
         var address = userIdentity.GetAddressByCookie(HttpContext);
         var cutoff = DateTime.UtcNow.AddDays(-7);
         if (string.IsNullOrEmpty(address))
             excludeSelf = false;
-        
-        var query = db.Listings
-            .AsNoTracking()
-            .Where(l => l.Status == EventStatus.ListingCreated)
-            .AsQueryable();
 
         if (excludeSelf)
             query = query.Where(l => l.SellerAddress != address);
         
         if(!string.IsNullOrEmpty(seller))
             query = query.Where(l => EF.Functions.ILike(l.SellerAddress, seller));
-
-        query = sortBy.ToLowerInvariant() switch
-        {
-            "id" => dir == OrderDirection.Desc
-                ? query.OrderByDescending(l => l.Id)
-                : query.OrderBy(l => l.Id),
-            "contractaddress" => dir == OrderDirection.Desc
-                ? query.OrderByDescending(l => l.NftContractAddress)
-                : query.OrderBy(l => l.NftContractAddress),
-            "tokenid" => orderBy == "desc" ? query.OrderByDescending(l => l.TokenId) : query.OrderBy(l => l.TokenId),
-            "selleraddress" => dir == OrderDirection.Desc
-                ? query.OrderByDescending(l => l.SellerAddress)
-                : query.OrderBy(l => l.SellerAddress),
-            "price" => dir == OrderDirection.Desc ? query.OrderByDescending(l => l.Price) : query.OrderBy(l => l.Price),
-            "name" => dir == OrderDirection.Desc ? query.OrderByDescending(l => l.NftMetadata.Name) : query.OrderBy(l => l.NftMetadata.Name),
-            _ => dir == OrderDirection.Desc ? query.OrderByDescending(l => l.Id) : query.OrderBy(l => l.Id)
-        };
+        
 
         if (!string.IsNullOrEmpty(search))
         {
@@ -149,11 +252,15 @@ public class MarketController(
 
         if (maxPrice.HasValue)
             query = query.Where(p => p.Price <= maxPrice.Value);
+        
+        if(cursorData != null)
+            query = query.Where(l => l.Status == EventStatus.ListingCreated);
 
         var listings = await query
-            .Take(pageSize)
+            .Take(pageSize + 1)
             .Select(l => new ListingResponse
             {
+                Id = l.Id,
                 ListingId = l.ListingId,
                 ContractAddress = l.NftContractAddress,
                 TokenId = l.TokenId,
@@ -187,7 +294,19 @@ public class MarketController(
                 outdatedPairs.Select(o => o.ContractAddress).ToList()!,
                 outdatedPairs.Select(o => o.TokenId).ToList());
         
-        return Ok(listings);
+        var items = listings.Take(pageSize).ToList();
+        var hasMore = listings.Count > pageSize;
+        
+        return Ok(new PagedResult<ListingResponse>
+        {
+            Items = items,
+            HasMore = hasMore,
+            NextCursor = hasMore
+                ? CursorService.Encode(new MarketListingCursor(items[^1].Id,
+                    GetLastSortValue(items[^1], sortBy),
+                    excludeSelf, seller, sortBy, orderBy, search, minPrice, maxPrice))
+                : null
+        });
     }
 
     [Authorize]
@@ -378,5 +497,18 @@ public class MarketController(
                 null,
             TotalPages = (totalItems + pageSize - 1) / pageSize
         });
+    }
+
+    private static string GetLastSortValue(ListingResponse listingResponse, string sortBy)
+    {
+        return sortBy.ToLowerInvariant() switch
+        {
+            "id" => listingResponse.Id.ToString(),
+            "contractaddress" => listingResponse.ContractAddress,
+            "tokenid" => listingResponse.TokenId.ToString(CultureInfo.InvariantCulture),
+            "selleraddress" => listingResponse.SellerAddress,
+            "price" => listingResponse.Price.ToString(CultureInfo.InvariantCulture),
+            "name" => listingResponse.Metadata.Name,
+        };
     }
 }
