@@ -104,12 +104,9 @@ builder.Services.AddCors(options =>
         });
 });
 
-builder.Services.AddDbContext<ApiDbContext>(options =>
-{
-    options
-        .UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
-        .UseSnakeCaseNamingConvention();
-});
+builder.Services.AddDbContextFactory<ApiDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+        .UseSnakeCaseNamingConvention());
 
 builder.Services.AddAuthentication(options =>
 {

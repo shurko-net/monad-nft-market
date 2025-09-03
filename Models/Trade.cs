@@ -10,5 +10,5 @@ public class Trade
     public Peer To { get; init; } = new();
     public EventStatus Status { get; set; } 
     
-    public IEnumerable<Listing> Listings { get; init; } = [];
+    public IEnumerable<Listing> Listings { get; init; } = new List<Listing>();
 }

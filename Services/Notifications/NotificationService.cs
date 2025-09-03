@@ -8,12 +8,12 @@ namespace MonadNftMarket.Services.Notifications;
 
 public class NotificationService : INotificationService
 {
-    private readonly ApiDbContext _db;
     private readonly IHubContext<NotificationHub> _hub;
     private readonly ILogger<NotificationService> _logger;
+    private readonly IDbContextFactory<ApiDbContext> _db;
 
     public NotificationService(
-        ApiDbContext db,
+        IDbContextFactory<ApiDbContext> db,
         IHubContext<NotificationHub> hub,
         ILogger<NotificationService> logger)
     {
@@ -23,15 +23,16 @@ public class NotificationService : INotificationService
     }
 
     private static string Normalize(string address) => address.Trim().ToLowerInvariant();
-    
+
     public async Task NotifyAsync(
         string userAddress,
         EventStatus status,
         string title,
         string body)
     {
+        await using var db = await _db.CreateDbContextAsync();
         userAddress = Normalize(userAddress);
-        
+
         var notification = new Notification
         {
             UserAddress = userAddress,
@@ -41,8 +42,8 @@ public class NotificationService : INotificationService
             IsRead = false
         };
 
-        _db.Notifications.Add(notification);
-        await _db.SaveChangesAsync();
+        db.Notifications.Add(notification);
+        await db.SaveChangesAsync();
 
         try
         {
@@ -59,29 +60,41 @@ public class NotificationService : INotificationService
 
     public async Task MarkAsReadAsync(string userAddress, Guid notificationId)
     {
-        var n = await _db.Notifications
+        await using var db = await _db.CreateDbContextAsync();
+
+        var n = await db.Notifications
             .FirstOrDefaultAsync(n => n.UserAddress == userAddress && n.Id == notificationId);
         if (n == null) return;
         n.IsRead = true;
-        
-        await _db.SaveChangesAsync();
+
+        await db.SaveChangesAsync();
     }
 
     public async Task MarkAllAsReadAsync(string userAddress)
-        => await _db.Notifications
-            .Where(n => n.UserAddress == userAddress && !n.IsRead)
-            .ExecuteUpdateAsync(s => 
-                s.SetProperty(n => n.IsRead, true));
+    {
+        await using var db = await _db.CreateDbContextAsync();
 
-    public async Task<int> GetUnreadCountAsync(string userAddress) 
-        => await _db.Notifications.CountAsync(n => n.UserAddress == userAddress && !n.IsRead);
+        await db.Notifications
+            .Where(n => n.UserAddress == userAddress && !n.IsRead)
+            .ExecuteUpdateAsync(s =>
+                s.SetProperty(n => n.IsRead, true));
+    }
+
+    public async Task<int> GetUnreadCountAsync(string userAddress)
+    {
+        await using var db = await _db.CreateDbContextAsync();
+        
+        return await db.Notifications.CountAsync(n => n.UserAddress == userAddress && !n.IsRead);
+    }
 
     public async Task NotifyMarketUpdateAsync()
         => await _hub.Clients.All.SendAsync(HubMethods.UpdateMarket, "Market updated");
 
     public async Task<List<Notification>> GetUnreadNotificationsAsync(string userAddress)
     {
-        var notifications = await _db.Notifications
+        await using var db = await _db.CreateDbContextAsync();
+        
+        var notifications = await db.Notifications
             .Where(n => !n.IsRead && n.UserAddress == userAddress)
             .OrderByDescending(n => n.CreatedAt)
             .Select(n => new Notification
