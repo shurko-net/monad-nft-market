@@ -368,6 +368,7 @@ public class MarketController(
             .Where(l => allIds.Contains(l.ListingId))
             .Select(l => new TradeMetadataDto
             {
+                Name = l.NftMetadata.Name,
                 ListingId = l.ListingId,
                 Kind = l.NftMetadata.Kind,
                 NftContractAddress = l.NftMetadata.NftContractAddress,
@@ -403,6 +404,7 @@ public class MarketController(
                 FromMetadata = fromMeta.Values
                     .Select(m => new TradeMetadataDto
                     {
+                        Name = m.Name,
                         Kind = m.Kind,
                         Description = m.Description,
                         ImageOriginal = m.ImageOriginal,
@@ -482,7 +484,7 @@ public class MarketController(
             totalPages = (totalItems + pageSize - 1) / pageSize
         });
     }
-
+    
     private static string GetLastSortValue(ListingResponse listingResponse, string sortBy)
     {
         return sortBy.ToLowerInvariant() switch
