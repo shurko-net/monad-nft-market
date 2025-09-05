@@ -29,13 +29,13 @@ builder.Configuration
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
     .AddDockerSecrets();
 
-string cookieName =
+var cookieName =
     builder.Configuration.GetValue<string>(
         $"{nameof(EnvVariables)}:{nameof(EnvVariables.CookieName)}"
     )
     ?? throw new InvalidOperationException("CookieName is missing");
 
-string jwtSecret =
+var jwtSecret =
     builder.Configuration.GetValue<string>(
         $"{nameof(EnvVariables)}:{nameof(EnvVariables.JwtTokenSecret)}"
     )
@@ -43,6 +43,14 @@ string jwtSecret =
         EnvVariables.ToDockerVariables(nameof(EnvVariables.JwtTokenSecret))
     )
     ?? throw new InvalidOperationException("JwtTokenSecret is missing");
+
+var connectionString = 
+    builder.Configuration.GetValue<string>(
+        $"{nameof(EnvVariables)}:{nameof(EnvVariables.PostgresConnectionString)}"
+        )
+    ?? builder.Configuration.GetValue<string>(
+        EnvVariables.ToDockerVariables(nameof(EnvVariables.PostgresConnectionString)))
+    ?? throw new InvalidOperationException("PostgresConnectionString is missing");
 
 builder.Services.Configure<EnvVariables>(options =>
 {
@@ -97,7 +105,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: myAllowSpecificOrigins,
         policyBuilder =>
         {
-            policyBuilder.WithOrigins("http://localhost:3000")
+            policyBuilder.WithOrigins("https://monad-nft-market.duckdns.org/")
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials();
@@ -105,7 +113,7 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddDbContextFactory<ApiDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+    options.UseNpgsql(connectionString)
         .UseSnakeCaseNamingConvention());
 
 builder.Services.AddAuthentication(options =>
@@ -115,7 +123,7 @@ builder.Services.AddAuthentication(options =>
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 }).AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
 {
-    // options.RequireHttpsMetadata = true;
+    options.RequireHttpsMetadata = builder.Environment.IsProduction();
     options.RequireHttpsMetadata = false;
     options.SaveToken = true;
 

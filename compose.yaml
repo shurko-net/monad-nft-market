@@ -12,6 +12,9 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
+    secrets:
+      - postgres_connection_string
+      - jwt_token_secret
     networks:
       - monad_nft_market_net
   
@@ -72,6 +75,10 @@ secrets:
   ssl_options:
     external: true
   ssl_dhparams:
+    external: true
+  postgres_connection_string:
+    external: true
+  jwt_token_secret:
     external: true
     
 networks:

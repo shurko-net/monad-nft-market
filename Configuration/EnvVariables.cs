@@ -3,6 +3,7 @@ namespace MonadNftMarket.Configuration;
 public class EnvVariables
 {
     public string JwtTokenSecret { get; set; } = string.Empty;
+    public string PostgresConnectionString { get; set; } = string.Empty;
     public string CookieName { get; set; } = string.Empty;
     public string HyperSyncQueryUrl { get; set; } = string.Empty;
     public string MonadRpcUrl { get; set; } = string.Empty;
