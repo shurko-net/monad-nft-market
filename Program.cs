@@ -95,6 +95,7 @@ builder.Services.AddSingleton<IHyperSyncQuery, HyperSyncQuery>();
 builder.Services.AddSingleton<IMonadService, MonadService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IUserIdentity, UserIdentity>();
+builder.Services.AddScoped<IDbInitializer, DbInitializer>();
 builder.Services.AddSingleton<IUserIdProvider, WalletUserIdProvider>();
 builder.Services.AddScoped<IUpdateMetadata, UpdateMetadata>();
 builder.Services.AddMemoryCache();
