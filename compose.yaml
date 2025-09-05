@@ -1,0 +1,82 @@
+﻿configs:
+  default_nginx_conf:
+    file: ../nginx/nginx.conf
+    
+services:
+  backend:
+    image: monad-nft-market-backend
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    networks:
+      - monad_nft_market_net
+  
+  frontend:
+    image: monad-nft-market-frontend
+    ports:
+      - "3000:3000"
+    networks:
+      - monad_nft_market_net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        
+  db:
+    image: postgres
+    restart: always
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_DB: nft_market
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    secrets:
+      - db_password
+  
+  nginx:
+    image: nginx:stable-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    configs:
+      - source: default_nginx_conf
+        target: /etc/nginx/nginx.conf
+    networks:
+      - monad_nft_market_net
+    secrets:
+      - market_ssl_fullchain
+      - market_ssl_privkey
+      - ssl_options
+      - ssl_dhparams
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+        
+        
+secrets:
+  db_password:
+    external: true
+  market_ssl_fullchain:
+    external: true
+  market_ssl_privkey:
+    external: true
+  ssl_options:
+    external: true
+  ssl_dhparams:
+    external: true
+    
+networks:
+  monad_nft_market_net:
+    driver: overlay
+    
+volumes:
+  pgdata:
