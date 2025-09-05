@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MonadNftMarket.Context;
+using MonadNftMarket.DbInitializer;
 using MonadNftMarket.Filters;
 using MonadNftMarket.Hubs;
 using MonadNftMarket.Providers;
@@ -163,6 +164,7 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 app.UseHttpsRedirection();
+SeedDatabase();
 
 app.UseCors(myAllowSpecificOrigins);
 
@@ -186,3 +188,10 @@ app.MapControllers();
 app.MapHub<NotificationHub>("/notificationHub");
 
 app.Run();
+
+void SeedDatabase()
+{
+    using var scope = app.Services.CreateScope();
+    var dbInitializer = scope.ServiceProvider.GetRequiredService<IDbInitializer>();
+    dbInitializer.Initialize();
+}
