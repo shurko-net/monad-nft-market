@@ -50,9 +50,8 @@ var connectionString = builder.Environment.IsProduction()
     ? builder.Configuration.GetValue<string>(
           EnvVariables.ToDockerVariables(nameof(EnvVariables.PostgresConnectionString)))
       ?? throw new InvalidOperationException("PostgresConnectionString is missing")
-    : builder.Configuration.GetValue<string>(
-        $"{nameof(EnvVariables)}:{nameof(EnvVariables.PostgresConnectionString)}"
-    ) ?? throw new InvalidOperationException("PostgresConnectionString is missing");
+    : builder.Configuration.GetConnectionString("DefaultConnection")
+      ?? throw new InvalidOperationException("PostgresConnectionString is missing");
 
 builder.Services.Configure<EnvVariables>(options =>
 {
