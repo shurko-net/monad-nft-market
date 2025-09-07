@@ -179,7 +179,7 @@ public class RecordChanges : BackgroundService
                                     .NotifyAsync(lst.SellerAddress,
                                         EventStatus.ListingCreated,
                                         "Listing created",
-                                        $"You created listing #{lst.ListingId}. Price: {lst.Price} ETH");
+                                        $"You created listing #{lst.ListingId}. Price: {lst.Price} MON");
 
                                 _logger.LogInformation($"New listing: {e.Id}");
 
@@ -297,13 +297,13 @@ public class RecordChanges : BackgroundService
                                     .NotifyAsync(lst.SellerAddress,
                                         EventStatus.ListingSold,
                                         "Listing sold",
-                                        $"Your listing #{lst.ListingId} was bought by {lst.BuyerAddress} for {lst.Price} ETH");
+                                        $"Your listing #{lst.ListingId} was bought by {lst.BuyerAddress} for {lst.Price} MON");
                                 
                                 await notifyService
                                     .NotifyAsync(lst.BuyerAddress,
                                         EventStatus.ListingBought,
                                         "Listing sold",
-                                        $"Listing #{lst.ListingId} was bought by you for {lst.Price} ETH");
+                                        $"Listing #{lst.ListingId} was bought by you for {lst.Price} MON");
                                 
                                 await notifyService.NotifyMarketUpdateAsync();
                             }
