@@ -36,22 +36,23 @@ var cookieName =
     )
     ?? throw new InvalidOperationException("CookieName is missing");
 
-var jwtSecret = builder.Environment.IsProduction() 
+var jwtSecret = builder.Environment.IsProduction()
     ? builder.Configuration.GetValue<string>(
-          $"{nameof(EnvVariables)}:{nameof(EnvVariables.JwtTokenSecret)}"
-      ) ?? throw new InvalidOperationException("JwtTokenSecret is missing")
-      : builder.Configuration.GetValue<string>(
-            EnvVariables.ToDockerVariables(nameof(EnvVariables.JwtTokenSecret))
-        )
-        ?? throw new InvalidOperationException("JwtTokenSecret is missing");
+          EnvVariables.ToDockerVariables(nameof(EnvVariables.JwtTokenSecret))
+      )
+      ?? throw new InvalidOperationException("JwtTokenSecret is missing")
+    : builder.Configuration.GetValue<string>(
+        $"{nameof(EnvVariables)}:{nameof(EnvVariables.JwtTokenSecret)}"
+    ) ?? throw new InvalidOperationException("JwtTokenSecret is missing");
 
-var connectionString = builder.Environment.IsProduction() 
+
+var connectionString = builder.Environment.IsProduction()
     ? builder.Configuration.GetValue<string>(
-          $"{nameof(EnvVariables)}:{nameof(EnvVariables.PostgresConnectionString)}"
-      ) ?? throw new InvalidOperationException("PostgresConnectionString is missing")
-      : builder.Configuration.GetValue<string>(
           EnvVariables.ToDockerVariables(nameof(EnvVariables.PostgresConnectionString)))
-      ?? throw new InvalidOperationException("PostgresConnectionString is missing");
+      ?? throw new InvalidOperationException("PostgresConnectionString is missing")
+    : builder.Configuration.GetValue<string>(
+        $"{nameof(EnvVariables)}:{nameof(EnvVariables.PostgresConnectionString)}"
+    ) ?? throw new InvalidOperationException("PostgresConnectionString is missing");
 
 builder.Services.Configure<EnvVariables>(options =>
 {

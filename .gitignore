@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# sln from vs code
+monad-nft-market.sln
+
 # appsettings.json
 appsettings.Development.json
 
