@@ -36,22 +36,22 @@ var cookieName =
     )
     ?? throw new InvalidOperationException("CookieName is missing");
 
-var jwtSecret =
-    builder.Configuration.GetValue<string>(
-        $"{nameof(EnvVariables)}:{nameof(EnvVariables.JwtTokenSecret)}"
-    )
-    ?? builder.Configuration.GetValue<string>(
-        EnvVariables.ToDockerVariables(nameof(EnvVariables.JwtTokenSecret))
-    )
-    ?? throw new InvalidOperationException("JwtTokenSecret is missing");
-
-var connectionString = 
-    builder.Configuration.GetValue<string>(
-        $"{nameof(EnvVariables)}:{nameof(EnvVariables.PostgresConnectionString)}"
+var jwtSecret = builder.Environment.IsProduction() 
+    ? builder.Configuration.GetValue<string>(
+          $"{nameof(EnvVariables)}:{nameof(EnvVariables.JwtTokenSecret)}"
+      ) ?? throw new InvalidOperationException("JwtTokenSecret is missing")
+      : builder.Configuration.GetValue<string>(
+            EnvVariables.ToDockerVariables(nameof(EnvVariables.JwtTokenSecret))
         )
-    ?? builder.Configuration.GetValue<string>(
-        EnvVariables.ToDockerVariables(nameof(EnvVariables.PostgresConnectionString)))
-    ?? throw new InvalidOperationException("PostgresConnectionString is missing");
+        ?? throw new InvalidOperationException("JwtTokenSecret is missing");
+
+var connectionString = builder.Environment.IsProduction() 
+    ? builder.Configuration.GetValue<string>(
+          $"{nameof(EnvVariables)}:{nameof(EnvVariables.PostgresConnectionString)}"
+      ) ?? throw new InvalidOperationException("PostgresConnectionString is missing")
+      : builder.Configuration.GetValue<string>(
+          EnvVariables.ToDockerVariables(nameof(EnvVariables.PostgresConnectionString)))
+      ?? throw new InvalidOperationException("PostgresConnectionString is missing");
 
 builder.Services.Configure<EnvVariables>(options =>
 {
@@ -107,7 +107,11 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: myAllowSpecificOrigins,
         policyBuilder =>
         {
-            policyBuilder.WithOrigins("https://monad-nft-market.duckdns.org/")
+            policyBuilder.WithOrigins(
+                    builder.Environment.IsProduction() 
+                    ? "https://monad-nft-market.duckdns.org/"
+                    : "http://localhost:3000/"
+                    )
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials();
