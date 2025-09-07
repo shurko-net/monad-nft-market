@@ -21,13 +21,9 @@ services:
       - monad_nft_market_net
   
   frontend:
-    image: monad-nft-market-frontend
+    image: monad-nft-market-frontend:latest
     ports:
       - "3000:3000"
-    secrets:
-      - market_api_url
-      - market_ws_url
-      - market_contract_address
     networks:
       - monad_nft_market_net
     deploy:
@@ -87,12 +83,6 @@ secrets:
   postgres_connection_string:
     external: true
   jwt_token_secret:
-    external: true
-  market_api_url:
-    external: true
-  market_contract_address:
-    external: true
-  market_ws_url:
     external: true
     
 networks:
