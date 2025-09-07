@@ -109,8 +109,8 @@ builder.Services.AddCors(options =>
         {
             policyBuilder.WithOrigins(
                     builder.Environment.IsProduction() 
-                    ? "https://monad-nft-market.duckdns.org/"
-                    : "http://localhost:3000/"
+                    ? "https://monad-nft-market.duckdns.org"
+                    : "http://localhost:3000"
                     )
                 .AllowAnyHeader()
                 .AllowAnyMethod()
