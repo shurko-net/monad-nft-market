@@ -179,7 +179,7 @@ public class RecordChanges : BackgroundService
                                     .NotifyAsync(lst.SellerAddress,
                                         EventStatus.ListingCreated,
                                         "Listing created",
-                                        $"You created listing #{lst.ListingId}. Price: {lst.Price} MON");
+                                        $"You created listing #{lst.ListingId}. Price: {lst.Price} MON"); 
 
                                 _logger.LogInformation($"New listing: {e.Id}");
 

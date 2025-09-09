@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using MonadNftMarket.Configuration;
-using MonadNftMarket.Models;
 using MonadNftMarket.Models.DTO.MagicEden;
 
 namespace MonadNftMarket.Providers;
@@ -138,12 +137,13 @@ public class MagicEdenProvider : IMagicEdenProvider
         
         return tokens.Where(x => x.Token.Kind == "erc721" && 
                                  !string.IsNullOrWhiteSpace(x.Token.Name))
-            .Select(x =>
+            .Select((x, index) =>
         {
             var t = x.Token;
-
+            
             return new UserToken
             {
+                Id = index + 1,
                 ContractAddress = t.Contract ?? string.Empty,
                 TokenId = t.TokenId ?? string.Empty,
                 Kind = t.Kind ?? string.Empty,
@@ -178,8 +178,8 @@ public class MagicEdenProvider : IMagicEdenProvider
             result,
             new MemoryCacheEntryOptions
             {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1),
-                SlidingExpiration = TimeSpan.FromSeconds(30),
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(15),
+                SlidingExpiration = TimeSpan.FromSeconds(5),
                 Priority = CacheItemPriority.Normal
             });
         
